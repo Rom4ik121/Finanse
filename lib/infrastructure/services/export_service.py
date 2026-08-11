@@ -141,7 +141,7 @@ class ExportService:
         debts: Sequence[Debt] = (),
         subscriptions: Sequence[Subscription] = (),
         filename: str = "summary_report.pdf",
-        title: str = "Finanse Summary Report",
+        title: str = "FinWise Summary Report",
     ) -> Path:
         """Generate a simple PDF summary using reportlab."""
         try:

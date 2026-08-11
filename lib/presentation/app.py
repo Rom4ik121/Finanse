@@ -87,11 +87,16 @@ class FinanseApp:
     async def start(self) -> None:
         """Load settings, apply theme, and mount the shell."""
         page = self.page
-        page.title = "Finanse"
+        page.title = "FinWise"
         page.padding = 0
         # Custom floating nav — do not use scaffold NavigationBar.
         page.navigation_bar = None
         try:
+            from pathlib import Path
+
+            icon_ico = Path(__file__).resolve().parents[2] / "assets" / "icon.ico"
+            if icon_ico.is_file():
+                page.window.icon = str(icon_ico)
             page.window.min_width = 320
             page.window.min_height = 560
             # Comfortable default desktop size (still mobile-friendly layout).

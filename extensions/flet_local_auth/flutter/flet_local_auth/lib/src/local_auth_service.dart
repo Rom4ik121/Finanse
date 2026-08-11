@@ -43,7 +43,7 @@ class FinanseLocalAuthService extends FletService {
         localizedReason: reason,
         authMessages: const [
           AndroidAuthMessages(
-            signInTitle: "Finanse",
+            signInTitle: "FinWise",
             biometricHint: "",
             cancelButton: "Cancel",
           ),

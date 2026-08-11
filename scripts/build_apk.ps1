@@ -32,7 +32,7 @@ python -m pip install -U "flet[all]" -r requirements.txt -q
 
 & $flet build apk `
     --org com.finanse.app `
-    --product Finanse `
+    --product FinWise `
     --build-version 0.1.0 `
     --build-number 1 `
     --yes `

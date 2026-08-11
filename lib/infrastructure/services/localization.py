@@ -97,9 +97,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "uz": "Saqlandi",
     },
     "app.name": {
-        "ru": "Finanse",
-        "en": "Finanse",
-        "uz": "Finanse",
+        "ru": "FinWise",
+        "en": "FinWise",
+        "uz": "FinWise",
     },
     "app.tagline": {
         "ru": "Личный учёт финансов",
@@ -737,9 +737,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "uz": "Biometriya tizim siyosati bilan o‘chirilgan",
     },
     "lock.biometric_prompt": {
-        "ru": "Разблокировать Finanse",
-        "en": "Unlock Finanse",
-        "uz": "Finanse qulfini ochish",
+        "ru": "Разблокировать FinWise",
+        "en": "Unlock FinWise",
+        "uz": "FinWise qulfini ochish",
     },
     "lock.biometric_retries": {
         "ru": "Слишком много попыток — используйте PIN",

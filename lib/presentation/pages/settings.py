@@ -621,7 +621,7 @@ class SettingsPage(ft.Column):
                 goals=goals,
                 debts=debts,
                 subscriptions=subs,
-                title="Finanse",
+                title="FinWise",
             )
             snack(self._page, f"PDF: {path}")
         except Exception as exc:  # noqa: BLE001

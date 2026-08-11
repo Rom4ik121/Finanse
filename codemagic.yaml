@@ -11,7 +11,7 @@
 
 workflows:
   ios-ipa:
-    name: Finanse iOS IPA (Ad Hoc)
+    name: FinWise iOS IPA (Ad Hoc)
     instance_type: mac_mini_m2
     max_build_duration: 120
     environment:
@@ -24,7 +24,7 @@ workflows:
         bundle_identifier: com.finanse.app
       vars:
         PACKAGE_NAME: com.finanse.app
-        APP_NAME: Finanse
+        APP_NAME: FinWise
         APP_VERSION: "0.1.0"
     scripts:
       - name: Install Python dependencies
@@ -70,7 +70,7 @@ workflows:
 
   # Unsigned / smoke path — useful to verify Flet builds before signing is ready.
   ios-smoke:
-    name: Finanse iOS smoke (no signing)
+    name: FinWise iOS smoke (no signing)
     instance_type: mac_mini_m2
     max_build_duration: 90
     environment:
@@ -85,8 +85,8 @@ workflows:
         script: |
           set -e
           # If this fails on binary wheels, fix deps before spending signed-build minutes.
-          flet build ipa --org com.finanse.app --product Finanse --yes --no-rich-output --verbose || \
-          flet build ios-simulator --org com.finanse.app --product Finanse --yes --no-rich-output --verbose
+          flet build ipa --org com.finanse.app --product FinWise --yes --no-rich-output --verbose || \
+          flet build ios-simulator --org com.finanse.app --product FinWise --yes --no-rich-output --verbose
     artifacts:
       - build/**/*.ipa
       - build/**/*.app

@@ -92,7 +92,7 @@ class EncryptionService:
     async def authenticate_biometric(
         self,
         *,
-        message: str = "Unlock Finanse",
+        message: str = "Unlock FinWise",
     ) -> BiometricResult:
         """Show the OS biometric / Windows Hello prompt."""
         return await request_biometric_verification(message)

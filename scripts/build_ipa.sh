@@ -31,7 +31,7 @@ python3 -m pip install -U "flet[all]" -r requirements.txt
 ARGS=(
   build ipa
   --org com.finanse.app
-  --product Finanse
+  --product FinWise
   --build-version 0.1.0
   --ios-team-id "$TEAM_ID"
   --ios-export-method "$EXPORT_METHOD"

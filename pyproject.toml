@@ -30,7 +30,7 @@ windows = [
 
 [tool.flet]
 org = "com.finanse.app"
-product = "Finanse"
+product = "FinWise"
 description = "Personal finance tracker"
 
 [tool.flet.app]
@@ -52,4 +52,4 @@ flet-local-auth = "./extensions/flet_local_auth"
 # provisioning_profile = "Finanse Ad Hoc"
 
 [tool.flet.ios.info]
-NSFaceIDUsageDescription = "Unlock Finanse with Face ID"
+NSFaceIDUsageDescription = "Unlock FinWise with Face ID"

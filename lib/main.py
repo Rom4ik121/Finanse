@@ -266,7 +266,7 @@ def run(config: Optional[AppConfig] = None) -> None:
 
     cfg = config or get_default_config()
     setup_logging(log_dir=cfg.log_dir)
-    logger.info("Starting Finanse (data_dir=%s)", cfg.data_dir)
+    logger.info("Starting FinWise (data_dir=%s)", cfg.data_dir)
 
     # Windows/uvicorn cannot bind host="*"; normalize to 0.0.0.0.
     for key in ("FLET_SERVER_IP", "FLET_HOST"):
