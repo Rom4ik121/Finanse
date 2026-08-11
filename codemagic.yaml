@@ -37,6 +37,7 @@ workflows:
       - name: Set up code signing keychain
         script: |
           keychain initialize
+          keychain add-certificates
       - name: Build IPA with Flet
         script: |
           set -euo pipefail
@@ -45,8 +46,6 @@ workflows:
             exit 1
           fi
 
-          # Codemagic injects matching cert/profile from ios_signing above.
-          # Prefer Ad Hoc export for installing on a registered iPhone.
           flet build ipa \
             --org com.finanse.app \
             --product "$APP_NAME" \

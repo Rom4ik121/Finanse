@@ -105,6 +105,19 @@ flet run --ios
 
 Для iOS нужны [готовые wheels](https://flet.dev/docs/publish) у бинарных пакетов (`pydantic-core`, `greenlet`, `matplotlib`, `reportlab` и т.д.). Если сборка упадёт на пакете без iOS-wheel — временно уберите тяжёлую зависимость или замените реализацию под mobile.
 
+### GitHub + Codemagic (IPA без своего Mac)
+
+1. Залить репозиторий на GitHub:
+
+```powershell
+.\scripts\push_github.ps1
+```
+
+2. Полная пошаговая инструкция: **[docs/CODEMAGIC.md](docs/CODEMAGIC.md)**  
+   (Apple Developer, сертификаты, workflow `ios-ipa`, скачивание IPA).
+
+Файл **`codemagic.yaml`** уже в корне — Codemagic подхватит его автоматически.
+
 ## Структура проекта
 
 ```text
