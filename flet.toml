@@ -7,5 +7,14 @@ version = "0.1.0"
 [app]
 module = "main"
 
+[tool.flet.dev_packages]
+flet-local-auth = "./extensions/flet_local_auth"
+
+[tool.flet.android.permission]
+"android.permission.USE_BIOMETRIC" = true
+"android.permission.USE_FINGERPRINT" = true
+
 [flutter.pubspec.dependencies]
-# Reserved for future native plugins (local_auth, etc.)
+local_auth = "^2.3.0"
+local_auth_android = "^1.0.46"
+local_auth_darwin = "^1.4.1"

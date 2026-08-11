@@ -145,7 +145,7 @@ def page_header(
     )
     return ft.Container(
         # Horizontal inset + comfortable tap height under Dynamic Island / notch.
-        padding=ft.padding.only(left=16, right=10, top=12, bottom=8),
+        padding=ft.Padding.only(left=16, right=10, top=12, bottom=8),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -214,7 +214,7 @@ def shortcut_chip(
     return ft.Container(
         width=width,
         expand=expand,
-        padding=ft.padding.symmetric(horizontal=8, vertical=10),
+        padding=ft.Padding.symmetric(horizontal=8, vertical=10),
         border_radius=CHIP_RADIUS,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
         border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),

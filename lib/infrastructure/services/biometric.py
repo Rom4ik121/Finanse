@@ -1,4 +1,4 @@
-"""Platform biometric / Windows Hello consent verification."""
+"""Platform biometric / Windows Hello / mobile local_auth verification."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 from enum import Enum
+from typing import Any, Protocol
 
 logger = logging.getLogger("finanse.infrastructure.services.biometric")
 
@@ -35,6 +36,34 @@ class BiometricResult(str, Enum):
     UNSUPPORTED = "unsupported"
 
 
+class LocalAuthBridge(Protocol):
+    """Subset of :class:`flet_local_auth.FinanseLocalAuth` used by Finanse."""
+
+    async def is_device_supported(self) -> bool: ...
+
+    async def can_check_biometrics(self) -> bool: ...
+
+    async def get_available_biometrics(self) -> list[str]: ...
+
+    async def authenticate(
+        self, *, reason: str, biometric_only: bool = True
+    ) -> dict[str, Any]: ...
+
+
+_local_auth_service: LocalAuthBridge | None = None
+
+
+def set_local_auth_service(service: LocalAuthBridge | None) -> None:
+    """Register the Flet local_auth service (Android / iOS builds)."""
+    global _local_auth_service
+    _local_auth_service = service
+
+
+def get_local_auth_service() -> LocalAuthBridge | None:
+    """Return the registered mobile auth service, if any."""
+    return _local_auth_service
+
+
 def biometric_env_override_ok() -> bool:
     """Test hook: ``FINANCE_BIOMETRIC_OK=1`` forces success."""
     return os.environ.get("FINANCE_BIOMETRIC_OK", "").strip().lower() in {
@@ -44,10 +73,17 @@ def biometric_env_override_ok() -> bool:
     }
 
 
+def mobile_runtime() -> bool:
+    """True when Python runs inside a packaged Flet Android / iOS app."""
+    return os.getenv("FLET_PLATFORM", "").strip().lower() in {"android", "ios"}
+
+
 def platform_supports_biometrics() -> bool:
     """True when this build can talk to an OS biometric API."""
     if biometric_env_override_ok():
         return True
+    if mobile_runtime():
+        return _local_auth_service is not None
     if sys.platform != "win32":
         return False
     try:
@@ -57,10 +93,70 @@ def platform_supports_biometrics() -> bool:
     return True
 
 
+def _map_mobile_auth_code(code: str | None) -> BiometricResult:
+    """Map ``local_auth`` / PlatformException codes to :class:`BiometricResult`."""
+    normalized = (code or "").strip().lower().replace("_", "")
+    if normalized in {"usercanceled", "canceled", "cancel", "auth_in_progress"}:
+        return BiometricResult.CANCELED
+    if normalized in {
+        "notavailable",
+        "nobiometrichardware",
+        "otheroperatingsystem",
+        "nohardware",
+    }:
+        return BiometricResult.DEVICE_NOT_PRESENT
+    if normalized in {"notenrolled", "passcodenotset", "biometricnotavailable"}:
+        return BiometricResult.NOT_CONFIGURED
+    if normalized in {"lockedout", "permanentlylockedout", "toomanyattempts"}:
+        return BiometricResult.RETRIES_EXHAUSTED
+    if normalized in {"systemcancel", "timeout"}:
+        return BiometricResult.DEVICE_BUSY
+    if normalized in {"notinteractive", "securityupdate_required"}:
+        return BiometricResult.DISABLED_BY_POLICY
+    return BiometricResult.FAILED
+
+
+async def _probe_mobile_status() -> BiometricStatus:
+    service = _local_auth_service
+    if service is None:
+        return BiometricStatus.UNSUPPORTED
+    try:
+        if not await service.is_device_supported():
+            return BiometricStatus.DEVICE_NOT_PRESENT
+        if not await service.can_check_biometrics():
+            return BiometricStatus.NOT_CONFIGURED
+        biometrics = await service.get_available_biometrics()
+        if not biometrics:
+            return BiometricStatus.NOT_CONFIGURED
+        return BiometricStatus.AVAILABLE
+    except Exception:  # noqa: BLE001
+        logger.exception("Mobile biometric availability check failed")
+        return BiometricStatus.UNSUPPORTED
+
+
+async def _request_mobile_verification(message: str) -> BiometricResult:
+    service = _local_auth_service
+    if service is None:
+        return BiometricResult.UNSUPPORTED
+    try:
+        payload = await service.authenticate(reason=message, biometric_only=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("Mobile biometric verification request failed")
+        return BiometricResult.FAILED
+
+    if payload.get("ok"):
+        return BiometricResult.VERIFIED
+    return _map_mobile_auth_code(payload.get("code"))
+
+
 async def probe_biometric_status() -> BiometricStatus:
-    """Ask the OS whether Windows Hello / biometrics can be used."""
+    """Ask the OS whether biometrics can be used."""
     if biometric_env_override_ok():
         return BiometricStatus.AVAILABLE
+    if mobile_runtime():
+        status = await _probe_mobile_status()
+        logger.info("Mobile biometric availability: %s", status.value)
+        return status
     if sys.platform != "win32":
         return BiometricStatus.UNSUPPORTED
     try:
@@ -95,6 +191,11 @@ async def request_biometric_verification(message: str) -> BiometricResult:
     if biometric_env_override_ok():
         logger.info("Biometric accepted via FINANCE_BIOMETRIC_OK")
         return BiometricResult.VERIFIED
+
+    if mobile_runtime():
+        result = await _request_mobile_verification(message)
+        logger.info("Mobile biometric verification result: %s", result.value)
+        return result
 
     if sys.platform != "win32":
         return BiometricResult.UNSUPPORTED

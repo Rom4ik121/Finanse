@@ -1,0 +1,21 @@
+[project]
+name = "flet-local-auth"
+version = "0.1.0"
+description = "Biometric unlock for Finanse (local_auth bridge for Flet)."
+requires-python = ">=3.11"
+dependencies = [
+  "flet>=0.83.0,<0.87",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"flutter.flet_local_auth" = [
+  "pubspec.yaml",
+  "lib/**",
+]

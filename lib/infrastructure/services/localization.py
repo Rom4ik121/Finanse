@@ -722,14 +722,14 @@ STRINGS: dict[str, dict[str, str]] = {
         "uz": "Biometriyani tasdiqlab bo‘lmadi — PIN dan foydalaning",
     },
     "lock.biometric_no_device": {
-        "ru": "Нет сканера отпечатка / камеры — настройте Windows Hello или используйте PIN",
-        "en": "No biometric device — set up Windows Hello or use PIN",
-        "uz": "Barmoq izi / kamera yo‘q — Windows Hello sozlang yoki PIN ishlating",
+        "ru": "Биометрия недоступна на этом устройстве — настройте отпечаток или Face ID",
+        "en": "No biometric hardware — enroll fingerprint or Face ID in system settings",
+        "uz": "Biometriya qurilmasi yo‘q — tizim sozlamalarida barmoq izi yoki Face ID qo‘shing",
     },
     "lock.biometric_not_configured": {
-        "ru": "Windows Hello не настроен для этого пользователя",
-        "en": "Windows Hello is not set up for this user",
-        "uz": "Windows Hello bu foydalanuvchi uchun sozlanmagan",
+        "ru": "Биометрия не настроена — добавьте отпечаток или лицо в настройках телефона",
+        "en": "Biometrics not set up — enroll fingerprint or face in device settings",
+        "uz": "Biometriya sozlanmagan — qurilma sozlamalarida barmoq izi yoki yuz qo‘shing",
     },
     "lock.biometric_policy": {
         "ru": "Биометрия отключена политикой системы",
@@ -872,19 +872,19 @@ STRINGS: dict[str, dict[str, str]] = {
         "uz": "Biometriya",
     },
     "settings.biometric_hint_missing": {
-        "ru": "Устройство биометрии не найдено. Настройте Windows Hello в параметрах Windows",
-        "en": "No biometric device found. Set up Windows Hello in Windows Settings",
-        "uz": "Biometriya qurilmasi topilmadi. Windows sozlamalarida Windows Hello ni sozlang",
+        "ru": "Сканер не найден. Добавьте отпечаток или Face ID в настройках устройства",
+        "en": "No biometric sensor. Enroll fingerprint or Face ID in device settings",
+        "uz": "Biometriya sensori topilmadi. Qurilma sozlamalarida barmoq izi yoki Face ID qo‘shing",
     },
     "settings.biometric_hint_ok": {
-        "ru": "Windows Hello / отпечаток / лицо готовы к использованию",
-        "en": "Windows Hello / fingerprint / face is ready",
-        "uz": "Windows Hello / barmoq izi / yuz tayyor",
+        "ru": "Отпечаток / Face ID готовы — можно входить по биометрии",
+        "en": "Fingerprint / Face ID is ready for unlock",
+        "uz": "Barmoq izi / Face ID qulfni ochish uchun tayyor",
     },
     "settings.biometric_hint_unconfigured": {
-        "ru": "Добавьте отпечаток или лицо в Windows Hello, затем включите снова",
-        "en": "Add a fingerprint or face in Windows Hello, then enable again",
-        "uz": "Windows Hello ga barmoq izi yoki yuz qo‘shing, keyin qayta yoqing",
+        "ru": "Добавьте отпечаток или лицо в настройках устройства, затем включите снова",
+        "en": "Enroll a fingerprint or face in device settings, then enable again",
+        "uz": "Qurilma sozlamalarida barmoq izi yoki yuz qo‘shing, keyin qayta yoqing",
     },
     "settings.biometric_need_pin": {
         "ru": "Сначала установите PIN — биометрия работает вместе с ним",
@@ -892,9 +892,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "uz": "Avval PIN o‘rnating — biometriya u bilan birga ishlaydi",
     },
     "settings.biometric_unsupported": {
-        "ru": "Биометрия на этой платформе пока не поддерживается",
-        "en": "Biometrics are not supported on this platform yet",
-        "uz": "Bu platformada biometriya hali qo‘llab-quvvatlanmaydi",
+        "ru": "Биометрия недоступна на этой платформе",
+        "en": "Biometrics are not available on this platform",
+        "uz": "Bu platformada biometriya mavjud emas",
     },
     "settings.clear_pin": {
         "ru": "Сбросить PIN",

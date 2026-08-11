@@ -136,7 +136,7 @@ class CurrenciesPage(ft.Column):
                 ),
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=16),
+                    padding=ft.Padding.symmetric(horizontal=16),
                     content=self._body,
                 ),
             ],
@@ -196,7 +196,7 @@ class CurrenciesPage(ft.Column):
                         controls=[self._from_picker, swap_btn, self._to_picker],
                     ),
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=14, vertical=14),
+                        padding=ft.Padding.symmetric(horizontal=14, vertical=14),
                         border_radius=14,
                         bgcolor=ft.Colors.SURFACE,
                         border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),

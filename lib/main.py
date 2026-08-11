@@ -199,6 +199,23 @@ async def _flet_main(page: ft.Page) -> None:
     """Async Flet target: wire container, background task, UI."""
     global _rate_task, _reminder_task
 
+    from lib.infrastructure.services.biometric import (
+        mobile_runtime,
+        set_local_auth_service,
+    )
+
+    _local_auth_control = None
+    if mobile_runtime():
+        try:
+            from flet_local_auth import FinanseLocalAuth
+
+            _local_auth_control = FinanseLocalAuth()
+            page.add(_local_auth_control)
+            set_local_auth_service(_local_auth_control)
+            logger.info("Mobile biometric service registered")
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to register mobile biometric service")
+
     config = get_default_config()
     setup_logging(log_dir=config.log_dir)
     init_db(config)

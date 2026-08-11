@@ -53,6 +53,8 @@ workflows:
             --ios-team-id "$APPLE_TEAM_ID" \
             --ios-export-method release-testing \
             --ios-signing-certificate "Apple Distribution" \
+            --yes \
+            --no-rich-output \
             --verbose
       - name: Locate IPA
         script: |
@@ -83,8 +85,8 @@ workflows:
         script: |
           set -e
           # If this fails on binary wheels, fix deps before spending signed-build minutes.
-          flet build ipa --org com.finanse.app --product Finanse --verbose || \
-          flet build ios-simulator --org com.finanse.app --product Finanse --verbose
+          flet build ipa --org com.finanse.app --product Finanse --yes --no-rich-output --verbose || \
+          flet build ios-simulator --org com.finanse.app --product Finanse --yes --no-rich-output --verbose
     artifacts:
       - build/**/*.ipa
       - build/**/*.app

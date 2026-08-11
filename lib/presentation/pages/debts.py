@@ -47,12 +47,12 @@ class DebtsPage(ft.Column):
                     ],
                 ),
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16),
+                    padding=ft.Padding.symmetric(horizontal=16),
                     content=self._banner,
                 ),
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=16),
+                    padding=ft.Padding.symmetric(horizontal=16),
                     content=self._list,
                 ),
             ],

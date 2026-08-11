@@ -87,7 +87,7 @@ class CurrencyTickerPicker(ft.Container):
             border_radius=14,
             bgcolor=ft.Colors.SURFACE,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             ink=True,
             on_click=lambda _e: self.open(),
             content=ft.Row(

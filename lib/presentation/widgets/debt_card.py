@@ -104,7 +104,7 @@ class DebtCard(ft.Container):
                     ],
                 ),
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
                     border_radius=999,
                     bgcolor=ft.Colors.ERROR_CONTAINER
                     if i_owe

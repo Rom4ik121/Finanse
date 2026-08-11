@@ -145,7 +145,7 @@ class DateTimeField(ft.Column):
             on_click=lambda _e: self.open_picker(),
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=12),
-                padding=ft.padding.symmetric(horizontal=14, vertical=12),
+                padding=ft.Padding.symmetric(horizontal=14, vertical=12),
             ),
         )
         self._change_btn = ft.TextButton(
@@ -166,7 +166,7 @@ class DateTimeField(ft.Column):
             border_radius=12,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             content=ft.Row(
                 spacing=4,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -215,7 +215,7 @@ class DateTimeField(ft.Column):
             border_radius=12,
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            padding=ft.padding.all(10),
+            padding=ft.Padding.all(10),
             content=ft.Column(
                 tight=True,
                 spacing=8,

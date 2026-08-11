@@ -214,7 +214,7 @@ class CategoryPicker(ft.Column):
 
         icon_panel = ft.Container(
             visible=False,
-            padding=ft.padding.only(top=8),
+            padding=ft.Padding.only(top=8),
             content=ft.Container(
                 height=280,
                 border_radius=14,
@@ -230,7 +230,7 @@ class CategoryPicker(ft.Column):
         )
         color_panel = ft.Container(
             visible=False,
-            padding=ft.padding.only(top=8),
+            padding=ft.Padding.only(top=8),
             content=ft.Container(
                 height=160,
                 border_radius=14,
@@ -382,7 +382,7 @@ class CategoryPicker(ft.Column):
         _refresh_previews()
 
         icon_toggle = ft.Container(
-            padding=ft.padding.symmetric(horizontal=10, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=8),
             border_radius=14,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
@@ -411,7 +411,7 @@ class CategoryPicker(ft.Column):
             ),
         )
         color_toggle = ft.Container(
-            padding=ft.padding.symmetric(horizontal=10, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=8),
             border_radius=14,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),

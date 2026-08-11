@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from datetime import datetime, timezone
+
+import flet as ft
 
 from lib.domain.entities.account import Account
 from lib.domain.entities.debt import Debt, DebtDirection
@@ -14,7 +17,6 @@ from lib.presentation.widgets.charts import build_line_chart_image, build_pie_ch
 from lib.presentation.widgets.debt_card import DebtCard
 from lib.presentation.widgets.subscription_card import SubscriptionCard
 from lib.presentation.widgets.transaction_tile import TransactionTile
-from datetime import datetime, timezone
 
 
 def test_currency_dropdown_options_localized() -> None:
@@ -71,13 +73,13 @@ def test_subscription_and_debt_cards_build() -> None:
 
 def test_charts_empty_and_with_data() -> None:
     empty_pie = build_pie_chart_image([], [], language="en")
-    assert empty_pie.src.startswith("data:image/png")
+    assert isinstance(empty_pie, (ft.Image, ft.Container))
 
     pie = build_pie_chart_image(["Food"], [Decimal("10")], language="ru")
-    assert pie.src.startswith("data:image/png")
+    assert isinstance(pie, (ft.Image, ft.Container))
 
     empty_line = build_line_chart_image([], [], [], language="uz")
-    assert empty_line.src.startswith("data:image/png")
+    assert isinstance(empty_line, (ft.Image, ft.Container))
 
     line = build_line_chart_image(
         ["01-01", "01-02"],
@@ -85,4 +87,20 @@ def test_charts_empty_and_with_data() -> None:
         [Decimal("5"), Decimal("8")],
         language="en",
     )
-    assert line.src.startswith("data:image/png")
+    assert isinstance(line, (ft.Image, ft.Container))
+
+
+def test_charts_native_fallback(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "lib.presentation.widgets.charts._prefer_native_charts",
+        lambda: True,
+    )
+    pie = build_pie_chart_image(["Food", "Travel"], [Decimal("80"), Decimal("20")], language="ru")
+    assert isinstance(pie, ft.Container)
+    line = build_line_chart_image(
+        ["01-01"],
+        [Decimal("10")],
+        [Decimal("5")],
+        language="ru",
+    )
+    assert isinstance(line, ft.Container)

@@ -67,7 +67,7 @@ class FinanseApp:
             avoid_intrusions_left=True,
             avoid_intrusions_right=True,
             avoid_intrusions_bottom=True,
-            minimum_padding=ft.padding.only(top=8, bottom=4, left=0, right=0),
+            minimum_padding=ft.Padding.only(top=8, bottom=4, left=0, right=0),
             maintain_bottom_view_padding=True,
             content=ft.Column(
                 expand=True,

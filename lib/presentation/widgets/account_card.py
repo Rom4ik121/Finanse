@@ -117,5 +117,5 @@ class AccountCard(ft.Container):
             ink=True,
             on_click=card.on_click,
             content=body,
-            margin=ft.margin.only(bottom=8),
+            margin=ft.Margin.only(bottom=8),
         )

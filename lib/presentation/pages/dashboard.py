@@ -74,7 +74,7 @@ class DashboardPage(ft.Column):
                 ),
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=12),
+                    padding=ft.Padding.symmetric(horizontal=12),
                     content=self._body,
                 ),
             ],

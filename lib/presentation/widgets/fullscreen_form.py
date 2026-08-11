@@ -81,7 +81,7 @@ def open_fullscreen_form(
                     ),
                     ft.Container(
                         expand=True,
-                        padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
                         content=ft.Column(
                             expand=True,
                             spacing=12,

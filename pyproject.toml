@@ -36,6 +36,13 @@ description = "Personal finance tracker"
 [tool.flet.app]
 module = "main"
 
+[tool.flet.dev_packages]
+flet-local-auth = "./extensions/flet_local_auth"
+
+[tool.flet.android.permission]
+"android.permission.USE_BIOMETRIC" = true
+"android.permission.USE_FINGERPRINT" = true
+
 # Fill team_id after joining Apple Developer Program (Membership → Team ID).
 # Ad Hoc / development profiles must include your iPhone 12 UDID.
 [tool.flet.ios]

@@ -162,7 +162,7 @@ class SettingsPage(ft.Column):
 
         btn_style = ft.ButtonStyle(
             shape=ft.RoundedRectangleBorder(radius=12),
-            padding=ft.padding.symmetric(horizontal=14, vertical=12),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=12),
         )
 
         scroll_body = ft.Column(
@@ -355,7 +355,7 @@ class SettingsPage(ft.Column):
                                 bgcolor=ft.Colors.ERROR,
                                 color=ft.Colors.ON_ERROR,
                                 shape=ft.RoundedRectangleBorder(radius=12),
-                                padding=ft.padding.symmetric(
+                                padding=ft.Padding.symmetric(
                                     horizontal=16, vertical=12
                                 ),
                             ),
@@ -372,11 +372,11 @@ class SettingsPage(ft.Column):
             left=0,
             right=0,
             bottom=0,
-            padding=ft.padding.only(left=4, right=4, bottom=8),
+            padding=ft.Padding.only(left=4, right=4, bottom=8),
             content=ft.Container(
                 border_radius=18,
                 bgcolor=ft.Colors.PRIMARY,
-                padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                 ink=True,
                 on_click=lambda _e: run_async(page, self.save),
                 shadow=ft.BoxShadow(
@@ -409,7 +409,7 @@ class SettingsPage(ft.Column):
                 page_header(tr("nav.settings", lang)),
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=12, vertical=4),
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=4),
                     content=ft.Stack(
                         expand=True,
                         controls=[

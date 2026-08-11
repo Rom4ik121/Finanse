@@ -121,12 +121,12 @@ class TransactionTile(ft.Container):
             ],
         )
         super().__init__(
-            padding=ft.padding.symmetric(horizontal=10, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=8),
             border_radius=12,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             ink=True,
             on_click=lambda _e: on_edit(transaction) if on_edit else None,
-            margin=ft.margin.only(bottom=6),
+            margin=ft.Margin.only(bottom=6),
             content=body,
         )

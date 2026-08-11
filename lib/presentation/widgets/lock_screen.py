@@ -70,7 +70,7 @@ class LockScreen(ft.Container):
             icon=ft.Icons.FINGERPRINT,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=14),
-                padding=ft.padding.symmetric(horizontal=18, vertical=14),
+                padding=ft.Padding.symmetric(horizontal=18, vertical=14),
             ),
             width=280,
             visible=biometric_enabled,
@@ -79,7 +79,7 @@ class LockScreen(ft.Container):
 
         btn_style = ft.ButtonStyle(
             shape=ft.RoundedRectangleBorder(radius=14),
-            padding=ft.padding.symmetric(horizontal=18, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=18, vertical=14),
         )
         actions: list[ft.Control] = [
             ft.FilledButton(

@@ -6,6 +6,7 @@ from lib.infrastructure.services.biometric import (
     BiometricStatus,
     probe_biometric_status,
     request_biometric_verification,
+    set_local_auth_service,
 )
 from lib.infrastructure.services.encryption_service import EncryptionService, PinCredentials
 from lib.infrastructure.services.export_service import ExportService
@@ -39,5 +40,6 @@ __all__ = [
     "normalize_lang",
     "probe_biometric_status",
     "request_biometric_verification",
+    "set_local_auth_service",
     "t",
 ]

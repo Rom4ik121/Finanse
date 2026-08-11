@@ -34,7 +34,7 @@ class GoalProgress(ft.Container):
                     controls=[
                         ft.Text(goal.name, weight=ft.FontWeight.W_700, size=16),
                         ft.Container(
-                            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
                             border_radius=999,
                             bgcolor=ft.Colors.PRIMARY_CONTAINER,
                             content=ft.Text(

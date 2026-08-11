@@ -30,7 +30,7 @@ def dual_add_button(
             bgcolor=bgcolor,
             ink=True,
             on_click=lambda _e: on_click() if on_click else None,
-            padding=ft.padding.symmetric(horizontal=14, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             content=ft.Row(
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=6,

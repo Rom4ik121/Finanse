@@ -110,7 +110,7 @@ class TransactionsPage(ft.Column):
                     ],
                 ),
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=12),
+                    padding=ft.Padding.symmetric(horizontal=12),
                     content=ft.Column(
                         spacing=8,
                         tight=True,
@@ -125,7 +125,7 @@ class TransactionsPage(ft.Column):
                                         icon=ft.Icons.TUNE,
                                         style=ft.ButtonStyle(
                                             shape=ft.RoundedRectangleBorder(radius=12),
-                                            padding=ft.padding.symmetric(
+                                            padding=ft.Padding.symmetric(
                                                 horizontal=14, vertical=12
                                             ),
                                         ),
@@ -139,7 +139,7 @@ class TransactionsPage(ft.Column):
                 ),
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=10),
+                    padding=ft.Padding.symmetric(horizontal=10),
                     content=self._list,
                 ),
             ],
