@@ -1,0 +1,1059 @@
+[
+  {
+    "code": "RUB",
+    "name_ru": "Российский рубль",
+    "name_en": "Russian Ruble",
+    "symbol": "₽",
+    "is_crypto": false
+  },
+  {
+    "code": "USD",
+    "name_ru": "Доллар США",
+    "name_en": "US Dollar",
+    "symbol": "$",
+    "is_crypto": false
+  },
+  {
+    "code": "EUR",
+    "name_ru": "Евро",
+    "name_en": "Euro",
+    "symbol": "€",
+    "is_crypto": false
+  },
+  {
+    "code": "GBP",
+    "name_ru": "Фунт стерлингов",
+    "name_en": "British Pound",
+    "symbol": "£",
+    "is_crypto": false
+  },
+  {
+    "code": "CHF",
+    "name_ru": "Швейцарский франк",
+    "name_en": "Swiss Franc",
+    "symbol": "Fr",
+    "is_crypto": false
+  },
+  {
+    "code": "JPY",
+    "name_ru": "Японская иена",
+    "name_en": "Japanese Yen",
+    "symbol": "¥",
+    "is_crypto": false
+  },
+  {
+    "code": "CNY",
+    "name_ru": "Китайский юань",
+    "name_en": "Chinese Yuan",
+    "symbol": "¥",
+    "is_crypto": false
+  },
+  {
+    "code": "CAD",
+    "name_ru": "Канадский доллар",
+    "name_en": "Canadian Dollar",
+    "symbol": "C$",
+    "is_crypto": false
+  },
+  {
+    "code": "AUD",
+    "name_ru": "Австралийский доллар",
+    "name_en": "Australian Dollar",
+    "symbol": "A$",
+    "is_crypto": false
+  },
+  {
+    "code": "NZD",
+    "name_ru": "Новозеландский доллар",
+    "name_en": "New Zealand Dollar",
+    "symbol": "NZ$",
+    "is_crypto": false
+  },
+  {
+    "code": "SEK",
+    "name_ru": "Шведская крона",
+    "name_en": "Swedish Krona",
+    "symbol": "kr",
+    "is_crypto": false
+  },
+  {
+    "code": "NOK",
+    "name_ru": "Норвежская крона",
+    "name_en": "Norwegian Krone",
+    "symbol": "kr",
+    "is_crypto": false
+  },
+  {
+    "code": "DKK",
+    "name_ru": "Датская крона",
+    "name_en": "Danish Krone",
+    "symbol": "kr",
+    "is_crypto": false
+  },
+  {
+    "code": "PLN",
+    "name_ru": "Польский злотый",
+    "name_en": "Polish Zloty",
+    "symbol": "zł",
+    "is_crypto": false
+  },
+  {
+    "code": "CZK",
+    "name_ru": "Чешская крона",
+    "name_en": "Czech Koruna",
+    "symbol": "Kč",
+    "is_crypto": false
+  },
+  {
+    "code": "HUF",
+    "name_ru": "Венгерский форинт",
+    "name_en": "Hungarian Forint",
+    "symbol": "Ft",
+    "is_crypto": false
+  },
+  {
+    "code": "TRY",
+    "name_ru": "Турецкая лира",
+    "name_en": "Turkish Lira",
+    "symbol": "₺",
+    "is_crypto": false
+  },
+  {
+    "code": "INR",
+    "name_ru": "Индийская рупия",
+    "name_en": "Indian Rupee",
+    "symbol": "₹",
+    "is_crypto": false
+  },
+  {
+    "code": "KRW",
+    "name_ru": "Южнокорейская вона",
+    "name_en": "South Korean Won",
+    "symbol": "₩",
+    "is_crypto": false
+  },
+  {
+    "code": "SGD",
+    "name_ru": "Сингапурский доллар",
+    "name_en": "Singapore Dollar",
+    "symbol": "S$",
+    "is_crypto": false
+  },
+  {
+    "code": "HKD",
+    "name_ru": "Гонконгский доллар",
+    "name_en": "Hong Kong Dollar",
+    "symbol": "HK$",
+    "is_crypto": false
+  },
+  {
+    "code": "TWD",
+    "name_ru": "Новый тайваньский доллар",
+    "name_en": "New Taiwan Dollar",
+    "symbol": "NT$",
+    "is_crypto": false
+  },
+  {
+    "code": "THB",
+    "name_ru": "Тайский бат",
+    "name_en": "Thai Baht",
+    "symbol": "฿",
+    "is_crypto": false
+  },
+  {
+    "code": "MYR",
+    "name_ru": "Малайзийский ринггит",
+    "name_en": "Malaysian Ringgit",
+    "symbol": "RM",
+    "is_crypto": false
+  },
+  {
+    "code": "IDR",
+    "name_ru": "Индонезийская рупия",
+    "name_en": "Indonesian Rupiah",
+    "symbol": "Rp",
+    "is_crypto": false
+  },
+  {
+    "code": "PHP",
+    "name_ru": "Филиппинское песо",
+    "name_en": "Philippine Peso",
+    "symbol": "₱",
+    "is_crypto": false
+  },
+  {
+    "code": "VND",
+    "name_ru": "Вьетнамский донг",
+    "name_en": "Vietnamese Dong",
+    "symbol": "₫",
+    "is_crypto": false
+  },
+  {
+    "code": "BRL",
+    "name_ru": "Бразильский реал",
+    "name_en": "Brazilian Real",
+    "symbol": "R$",
+    "is_crypto": false
+  },
+  {
+    "code": "MXN",
+    "name_ru": "Мексиканское песо",
+    "name_en": "Mexican Peso",
+    "symbol": "Mex$",
+    "is_crypto": false
+  },
+  {
+    "code": "ARS",
+    "name_ru": "Аргентинское песо",
+    "name_en": "Argentine Peso",
+    "symbol": "$",
+    "is_crypto": false
+  },
+  {
+    "code": "CLP",
+    "name_ru": "Чилийское песо",
+    "name_en": "Chilean Peso",
+    "symbol": "$",
+    "is_crypto": false
+  },
+  {
+    "code": "COP",
+    "name_ru": "Колумбийское песо",
+    "name_en": "Colombian Peso",
+    "symbol": "$",
+    "is_crypto": false
+  },
+  {
+    "code": "ZAR",
+    "name_ru": "Южноафриканский рэнд",
+    "name_en": "South African Rand",
+    "symbol": "R",
+    "is_crypto": false
+  },
+  {
+    "code": "EGP",
+    "name_ru": "Египетский фунт",
+    "name_en": "Egyptian Pound",
+    "symbol": "E£",
+    "is_crypto": false
+  },
+  {
+    "code": "AED",
+    "name_ru": "Дирхам ОАЭ",
+    "name_en": "UAE Dirham",
+    "symbol": "د.إ",
+    "is_crypto": false
+  },
+  {
+    "code": "SAR",
+    "name_ru": "Саудовский риял",
+    "name_en": "Saudi Riyal",
+    "symbol": "﷼",
+    "is_crypto": false
+  },
+  {
+    "code": "ILS",
+    "name_ru": "Израильский шекель",
+    "name_en": "Israeli Shekel",
+    "symbol": "₪",
+    "is_crypto": false
+  },
+  {
+    "code": "KZT",
+    "name_ru": "Казахстанский тенге",
+    "name_en": "Kazakhstani Tenge",
+    "symbol": "₸",
+    "is_crypto": false
+  },
+  {
+    "code": "UAH",
+    "name_ru": "Украинская гривна",
+    "name_en": "Ukrainian Hryvnia",
+    "symbol": "₴",
+    "is_crypto": false
+  },
+  {
+    "code": "BYN",
+    "name_ru": "Белорусский рубль",
+    "name_en": "Belarusian Ruble",
+    "symbol": "Br",
+    "is_crypto": false
+  },
+  {
+    "code": "UZS",
+    "name_ru": "Узбекский сум",
+    "name_en": "Uzbekistani Som",
+    "symbol": "soʻm",
+    "is_crypto": false
+  },
+  {
+    "code": "GEL",
+    "name_ru": "Грузинский лари",
+    "name_en": "Georgian Lari",
+    "symbol": "₾",
+    "is_crypto": false
+  },
+  {
+    "code": "AMD",
+    "name_ru": "Армянский драм",
+    "name_en": "Armenian Dram",
+    "symbol": "֏",
+    "is_crypto": false
+  },
+  {
+    "code": "AZN",
+    "name_ru": "Азербайджанский манат",
+    "name_en": "Azerbaijani Manat",
+    "symbol": "₼",
+    "is_crypto": false
+  },
+  {
+    "code": "KGS",
+    "name_ru": "Киргизский сом",
+    "name_en": "Kyrgyzstani Som",
+    "symbol": "с",
+    "is_crypto": false
+  },
+  {
+    "code": "TJS",
+    "name_ru": "Таджикский сомони",
+    "name_en": "Tajikistani Somoni",
+    "symbol": "SM",
+    "is_crypto": false
+  },
+  {
+    "code": "MDL",
+    "name_ru": "Молдавский лей",
+    "name_en": "Moldovan Leu",
+    "symbol": "L",
+    "is_crypto": false
+  },
+  {
+    "code": "RON",
+    "name_ru": "Румынский лей",
+    "name_en": "Romanian Leu",
+    "symbol": "lei",
+    "is_crypto": false
+  },
+  {
+    "code": "BGN",
+    "name_ru": "Болгарский лев",
+    "name_en": "Bulgarian Lev",
+    "symbol": "лв",
+    "is_crypto": false
+  },
+  {
+    "code": "RSD",
+    "name_ru": "Сербский динар",
+    "name_en": "Serbian Dinar",
+    "symbol": "дин",
+    "is_crypto": false
+  },
+  {
+    "code": "ISK",
+    "name_ru": "Исландская крона",
+    "name_en": "Icelandic Krona",
+    "symbol": "kr",
+    "is_crypto": false
+  },
+  {
+    "code": "BTC",
+    "name_ru": "Биткоин",
+    "name_en": "Bitcoin",
+    "symbol": "₿",
+    "is_crypto": true
+  },
+  {
+    "code": "ETH",
+    "name_ru": "Эфириум",
+    "name_en": "Ethereum",
+    "symbol": "Ξ",
+    "is_crypto": true
+  },
+  {
+    "code": "USDT",
+    "name_ru": "Tether",
+    "name_en": "Tether",
+    "symbol": "₮",
+    "is_crypto": true
+  },
+  {
+    "code": "BNB",
+    "name_ru": "BNB",
+    "name_en": "BNB",
+    "symbol": "BNB",
+    "is_crypto": true
+  },
+  {
+    "code": "USDC",
+    "name_ru": "USD Coin",
+    "name_en": "USDC",
+    "symbol": "USDC",
+    "is_crypto": true
+  },
+  {
+    "code": "XRP",
+    "name_ru": "XRP",
+    "name_en": "XRP",
+    "symbol": "XRP",
+    "is_crypto": true
+  },
+  {
+    "code": "SOL",
+    "name_ru": "Solana",
+    "name_en": "Solana",
+    "symbol": "SOL",
+    "is_crypto": true
+  },
+  {
+    "code": "TRX",
+    "name_ru": "TRON",
+    "name_en": "TRON",
+    "symbol": "TRX",
+    "is_crypto": true
+  },
+  {
+    "code": "FIGR_HELOC",
+    "name_ru": "Figure Heloc",
+    "name_en": "Figure Heloc",
+    "symbol": "FIGR_",
+    "is_crypto": true
+  },
+  {
+    "code": "HYPE",
+    "name_ru": "Hyperliquid",
+    "name_en": "Hyperliquid",
+    "symbol": "HYPE",
+    "is_crypto": true
+  },
+  {
+    "code": "DOGE",
+    "name_ru": "Dogecoin",
+    "name_en": "Dogecoin",
+    "symbol": "Ð",
+    "is_crypto": true
+  },
+  {
+    "code": "USDS",
+    "name_ru": "USDS",
+    "name_en": "USDS",
+    "symbol": "USDS",
+    "is_crypto": true
+  },
+  {
+    "code": "RAIN",
+    "name_ru": "Rain",
+    "name_en": "Rain",
+    "symbol": "RAIN",
+    "is_crypto": true
+  },
+  {
+    "code": "LEO",
+    "name_ru": "LEO Token",
+    "name_en": "LEO Token",
+    "symbol": "LEO",
+    "is_crypto": true
+  },
+  {
+    "code": "ZEC",
+    "name_ru": "Zcash",
+    "name_en": "Zcash",
+    "symbol": "ZEC",
+    "is_crypto": true
+  },
+  {
+    "code": "XMR",
+    "name_ru": "Monero",
+    "name_en": "Monero",
+    "symbol": "ɱ",
+    "is_crypto": true
+  },
+  {
+    "code": "ADA",
+    "name_ru": "Cardano",
+    "name_en": "Cardano",
+    "symbol": "ADA",
+    "is_crypto": true
+  },
+  {
+    "code": "WBT",
+    "name_ru": "WhiteBIT Coin",
+    "name_en": "WhiteBIT Coin",
+    "symbol": "WBT",
+    "is_crypto": true
+  },
+  {
+    "code": "LINK",
+    "name_ru": "Chainlink",
+    "name_en": "Chainlink",
+    "symbol": "LINK",
+    "is_crypto": true
+  },
+  {
+    "code": "XLM",
+    "name_ru": "Stellar",
+    "name_en": "Stellar",
+    "symbol": "XLM",
+    "is_crypto": true
+  },
+  {
+    "code": "DAI",
+    "name_ru": "Dai",
+    "name_en": "Dai",
+    "symbol": "DAI",
+    "is_crypto": true
+  },
+  {
+    "code": "BCH",
+    "name_ru": "Bitcoin Cash",
+    "name_en": "Bitcoin Cash",
+    "symbol": "BCH",
+    "is_crypto": true
+  },
+  {
+    "code": "USD1",
+    "name_ru": "USD1",
+    "name_en": "USD1",
+    "symbol": "USD1",
+    "is_crypto": true
+  },
+  {
+    "code": "USDE",
+    "name_ru": "Ethena USDe",
+    "name_en": "Ethena USDe",
+    "symbol": "USDE",
+    "is_crypto": true
+  },
+  {
+    "code": "CC",
+    "name_ru": "Canton",
+    "name_en": "Canton",
+    "symbol": "CC",
+    "is_crypto": true
+  },
+  {
+    "code": "LTC",
+    "name_ru": "Litecoin",
+    "name_en": "Litecoin",
+    "symbol": "Ł",
+    "is_crypto": true
+  },
+  {
+    "code": "USDG",
+    "name_ru": "Global Dollar",
+    "name_en": "Global Dollar",
+    "symbol": "USDG",
+    "is_crypto": true
+  },
+  {
+    "code": "USYC",
+    "name_ru": "Circle USYC",
+    "name_en": "Circle USYC",
+    "symbol": "USYC",
+    "is_crypto": true
+  },
+  {
+    "code": "HBAR",
+    "name_ru": "Hedera",
+    "name_en": "Hedera",
+    "symbol": "HBAR",
+    "is_crypto": true
+  },
+  {
+    "code": "SUI",
+    "name_ru": "Sui",
+    "name_en": "Sui",
+    "symbol": "SUI",
+    "is_crypto": true
+  },
+  {
+    "code": "PYUSD",
+    "name_ru": "PayPal USD",
+    "name_en": "PayPal USD",
+    "symbol": "PYUSD",
+    "is_crypto": true
+  },
+  {
+    "code": "AVAX",
+    "name_ru": "Avalanche",
+    "name_en": "Avalanche",
+    "symbol": "AVAX",
+    "is_crypto": true
+  },
+  {
+    "code": "SHIB",
+    "name_ru": "Shiba Inu",
+    "name_en": "Shiba Inu",
+    "symbol": "SHIB",
+    "is_crypto": true
+  },
+  {
+    "code": "BUIDL",
+    "name_ru": "BlackRock USD Institutional Digital Liquidity Fund",
+    "name_en": "BlackRock USD Institutional Digital Liquidity Fund",
+    "symbol": "BUIDL",
+    "is_crypto": true
+  },
+  {
+    "code": "XAUT",
+    "name_ru": "Tether Gold",
+    "name_en": "Tether Gold",
+    "symbol": "XAUT",
+    "is_crypto": true
+  },
+  {
+    "code": "UNI",
+    "name_ru": "Uniswap",
+    "name_en": "Uniswap",
+    "symbol": "UNI",
+    "is_crypto": true
+  },
+  {
+    "code": "CRO",
+    "name_ru": "Cronos",
+    "name_en": "Cronos",
+    "symbol": "CRO",
+    "is_crypto": true
+  },
+  {
+    "code": "USDY",
+    "name_ru": "Ondo US Dollar Yield",
+    "name_en": "Ondo US Dollar Yield",
+    "symbol": "USDY",
+    "is_crypto": true
+  },
+  {
+    "code": "NEAR",
+    "name_ru": "NEAR",
+    "name_en": "NEAR Protocol",
+    "symbol": "NEAR",
+    "is_crypto": true
+  },
+  {
+    "code": "OKB",
+    "name_ru": "OKB",
+    "name_en": "OKB",
+    "symbol": "OKB",
+    "is_crypto": true
+  },
+  {
+    "code": "TAO",
+    "name_ru": "Bittensor",
+    "name_en": "Bittensor",
+    "symbol": "TAO",
+    "is_crypto": true
+  },
+  {
+    "code": "PAXG",
+    "name_ru": "PAX Gold",
+    "name_en": "PAX Gold",
+    "symbol": "PAXG",
+    "is_crypto": true
+  },
+  {
+    "code": "WLFI",
+    "name_ru": "World Liberty Financial",
+    "name_en": "World Liberty Financial",
+    "symbol": "WLFI",
+    "is_crypto": true
+  },
+  {
+    "code": "ONDO",
+    "name_ru": "Ondo",
+    "name_en": "Ondo",
+    "symbol": "ONDO",
+    "is_crypto": true
+  },
+  {
+    "code": "HTX",
+    "name_ru": "HTX DAO",
+    "name_en": "HTX DAO",
+    "symbol": "HTX",
+    "is_crypto": true
+  },
+  {
+    "code": "ASTER",
+    "name_ru": "Aster",
+    "name_en": "Aster",
+    "symbol": "ASTER",
+    "is_crypto": true
+  },
+  {
+    "code": "USDD",
+    "name_ru": "USDD",
+    "name_en": "USDD",
+    "symbol": "USDD",
+    "is_crypto": true
+  },
+  {
+    "code": "RLUSD",
+    "name_ru": "Ripple USD",
+    "name_en": "Ripple USD",
+    "symbol": "RLUSD",
+    "is_crypto": true
+  },
+  {
+    "code": "M",
+    "name_ru": "MemeCore",
+    "name_en": "MemeCore",
+    "symbol": "M",
+    "is_crypto": true
+  },
+  {
+    "code": "MNT",
+    "name_ru": "Mantle",
+    "name_en": "Mantle",
+    "symbol": "MNT",
+    "is_crypto": true
+  },
+  {
+    "code": "AAVE",
+    "name_ru": "Aave",
+    "name_en": "Aave",
+    "symbol": "AAVE",
+    "is_crypto": true
+  },
+  {
+    "code": "DOT",
+    "name_ru": "Polkadot",
+    "name_en": "Polkadot",
+    "symbol": "DOT",
+    "is_crypto": true
+  },
+  {
+    "code": "USDF",
+    "name_ru": "Falcon USD",
+    "name_en": "Falcon USD",
+    "symbol": "USDF",
+    "is_crypto": true
+  },
+  {
+    "code": "BFUSD",
+    "name_ru": "BFUSD",
+    "name_en": "BFUSD",
+    "symbol": "BFUSD",
+    "is_crypto": true
+  },
+  {
+    "code": "ICP",
+    "name_ru": "Internet Computer",
+    "name_en": "Internet Computer",
+    "symbol": "ICP",
+    "is_crypto": true
+  },
+  {
+    "code": "MORPHO",
+    "name_ru": "Morpho",
+    "name_en": "Morpho",
+    "symbol": "MORPH",
+    "is_crypto": true
+  },
+  {
+    "code": "SKY",
+    "name_ru": "Sky",
+    "name_en": "Sky",
+    "symbol": "SKY",
+    "is_crypto": true
+  },
+  {
+    "code": "WLD",
+    "name_ru": "Worldcoin",
+    "name_en": "Worldcoin",
+    "symbol": "WLD",
+    "is_crypto": true
+  },
+  {
+    "code": "U",
+    "name_ru": "United Stables",
+    "name_en": "United Stables",
+    "symbol": "U",
+    "is_crypto": true
+  },
+  {
+    "code": "PEPE",
+    "name_ru": "Pepe",
+    "name_en": "Pepe",
+    "symbol": "PEPE",
+    "is_crypto": true
+  },
+  {
+    "code": "USDGO",
+    "name_ru": "USDGO",
+    "name_en": "USDGO",
+    "symbol": "USDGO",
+    "is_crypto": true
+  },
+  {
+    "code": "BGB",
+    "name_ru": "Bitget Token",
+    "name_en": "Bitget Token",
+    "symbol": "BGB",
+    "is_crypto": true
+  },
+  {
+    "code": "PUMP",
+    "name_ru": "Pump.fun",
+    "name_en": "Pump.fun",
+    "symbol": "PUMP",
+    "is_crypto": true
+  },
+  {
+    "code": "EURSAFO",
+    "name_ru": "Spiko Amundi Overnight Swap Fund (EUR)",
+    "name_en": "Spiko Amundi Overnight Swap Fund (EUR)",
+    "symbol": "EURSA",
+    "is_crypto": true
+  },
+  {
+    "code": "ETC",
+    "name_ru": "Ethereum Classic",
+    "name_en": "Ethereum Classic",
+    "symbol": "ETC",
+    "is_crypto": true
+  },
+  {
+    "code": "PI",
+    "name_ru": "Pi Network",
+    "name_en": "Pi Network",
+    "symbol": "PI",
+    "is_crypto": true
+  },
+  {
+    "code": "BCAP",
+    "name_ru": "Blockchain Capital",
+    "name_en": "Blockchain Capital",
+    "symbol": "BCAP",
+    "is_crypto": true
+  },
+  {
+    "code": "USTB",
+    "name_ru": "Invesco Short Duration US Government Securities Fund",
+    "name_en": "Invesco Short Duration US Government Securities Fund",
+    "symbol": "USTB",
+    "is_crypto": true
+  },
+  {
+    "code": "EUTBL",
+    "name_ru": "Spiko EU T-Bills Money Market Fund",
+    "name_en": "Spiko EU T-Bills Money Market Fund",
+    "symbol": "EUTBL",
+    "is_crypto": true
+  },
+  {
+    "code": "KCS",
+    "name_ru": "KuCoin",
+    "name_en": "KuCoin",
+    "symbol": "KCS",
+    "is_crypto": true
+  },
+  {
+    "code": "JTRSY",
+    "name_ru": "Janus Henderson Anemoy Treasury Fund",
+    "name_en": "Janus Henderson Anemoy Treasury Fund",
+    "symbol": "JTRSY",
+    "is_crypto": true
+  },
+  {
+    "code": "ENA",
+    "name_ru": "Ethena",
+    "name_en": "Ethena",
+    "symbol": "ENA",
+    "is_crypto": true
+  },
+  {
+    "code": "QNT",
+    "name_ru": "Quant",
+    "name_en": "Quant",
+    "symbol": "QNT",
+    "is_crypto": true
+  },
+  {
+    "code": "JST",
+    "name_ru": "JUST",
+    "name_en": "JUST",
+    "symbol": "JST",
+    "is_crypto": true
+  },
+  {
+    "code": "POL",
+    "name_ru": "Polygon",
+    "name_en": "POL (ex-MATIC)",
+    "symbol": "POL",
+    "is_crypto": true
+  },
+  {
+    "code": "STABLE",
+    "name_ru": "​​Stable",
+    "name_en": "​​Stable",
+    "symbol": "STABL",
+    "is_crypto": true
+  },
+  {
+    "code": "ATOM",
+    "name_ru": "Cosmos",
+    "name_en": "Cosmos Hub",
+    "symbol": "ATOM",
+    "is_crypto": true
+  },
+  {
+    "code": "ALGO",
+    "name_ru": "Algorand",
+    "name_en": "Algorand",
+    "symbol": "ALGO",
+    "is_crypto": true
+  },
+  {
+    "code": "BDX",
+    "name_ru": "Beldex",
+    "name_en": "Beldex",
+    "symbol": "BDX",
+    "is_crypto": true
+  },
+  {
+    "code": "NEXO",
+    "name_ru": "NEXO",
+    "name_en": "NEXO",
+    "symbol": "NEXO",
+    "is_crypto": true
+  },
+  {
+    "code": "KAS",
+    "name_ru": "Kaspa",
+    "name_en": "Kaspa",
+    "symbol": "KAS",
+    "is_crypto": true
+  },
+  {
+    "code": "GT",
+    "name_ru": "Gate",
+    "name_en": "Gate",
+    "symbol": "GT",
+    "is_crypto": true
+  },
+  {
+    "code": "GHO",
+    "name_ru": "GHO",
+    "name_en": "GHO",
+    "symbol": "GHO",
+    "is_crypto": true
+  },
+  {
+    "code": "JAAA",
+    "name_ru": "Janus Henderson Anemoy AAA CLO Fund",
+    "name_en": "Janus Henderson Anemoy AAA CLO Fund",
+    "symbol": "JAAA",
+    "is_crypto": true
+  },
+  {
+    "code": "RENDER",
+    "name_ru": "Render",
+    "name_en": "Render",
+    "symbol": "RENDE",
+    "is_crypto": true
+  },
+  {
+    "code": "YLDS",
+    "name_ru": "YLDS",
+    "name_en": "YLDS",
+    "symbol": "YLDS",
+    "is_crypto": true
+  },
+  {
+    "code": "BEAT",
+    "name_ru": "Audiera",
+    "name_en": "Audiera",
+    "symbol": "BEAT",
+    "is_crypto": true
+  },
+  {
+    "code": "JUP",
+    "name_ru": "Jupiter",
+    "name_en": "Jupiter",
+    "symbol": "JUP",
+    "is_crypto": true
+  },
+  {
+    "code": "LIT",
+    "name_ru": "Lighter",
+    "name_en": "Lighter",
+    "symbol": "LIT",
+    "is_crypto": true
+  },
+  {
+    "code": "FIL",
+    "name_ru": "Filecoin",
+    "name_en": "Filecoin",
+    "symbol": "FIL",
+    "is_crypto": true
+  },
+  {
+    "code": "VVV",
+    "name_ru": "Venice Token",
+    "name_en": "Venice Token",
+    "symbol": "VVV",
+    "is_crypto": true
+  },
+  {
+    "code": "USD0",
+    "name_ru": "Usual USD",
+    "name_en": "Usual USD",
+    "symbol": "USD0",
+    "is_crypto": true
+  },
+  {
+    "code": "XDC",
+    "name_ru": "XDC Network",
+    "name_en": "XDC Network",
+    "symbol": "XDC",
+    "is_crypto": true
+  },
+  {
+    "code": "ARB",
+    "name_ru": "Arbitrum",
+    "name_en": "Arbitrum",
+    "symbol": "ARB",
+    "is_crypto": true
+  },
+  {
+    "code": "FLR",
+    "name_ru": "Flare",
+    "name_en": "Flare",
+    "symbol": "FLR",
+    "is_crypto": true
+  },
+  {
+    "code": "BTW",
+    "name_ru": "Bitway",
+    "name_en": "Bitway",
+    "symbol": "BTW",
+    "is_crypto": true
+  },
+  {
+    "code": "USX",
+    "name_ru": "USX",
+    "name_en": "USX",
+    "symbol": "USX",
+    "is_crypto": true
+  },
+  {
+    "code": "APT",
+    "name_ru": "Aptos",
+    "name_en": "Aptos",
+    "symbol": "APT",
+    "is_crypto": true
+  },
+  {
+    "code": "MATIC",
+    "name_ru": "Polygon (MATIC)",
+    "name_en": "Polygon (MATIC)",
+    "symbol": "MATIC",
+    "is_crypto": true
+  },
+  {
+    "code": "TON",
+    "name_ru": "Toncoin",
+    "name_en": "Toncoin",
+    "symbol": "TON",
+    "is_crypto": true
+  }
+]

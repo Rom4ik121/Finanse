@@ -1,0 +1,48 @@
+# Finanse — packaging / project metadata for Flet builds.
+# IPA can only be produced on macOS with Xcode + Apple Developer signing.
+
+[project]
+name = "finanse"
+version = "0.1.0"
+description = "Personal finance tracker"
+requires-python = ">=3.11"
+dependencies = [
+  "flet>=0.83.0",
+  "sqlalchemy>=2.0.36",
+  "pydantic>=2.10.0",
+  "httpx>=0.28.0",
+  "matplotlib>=3.9.0",
+  "reportlab>=4.2.0",
+  "python-dateutil>=2.9.0",
+  "aiosqlite>=0.20.0",
+  "greenlet>=3.1.0",
+  "platformdirs>=4.0.0",
+  "alembic>=1.14.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+windows = [
+  "winrt-runtime>=3.0.0",
+  "winrt-Windows.Foundation>=3.0.0",
+  "winrt-Windows.Security.Credentials.UI>=3.0.0",
+]
+
+[tool.flet]
+org = "com.finanse.app"
+product = "Finanse"
+description = "Personal finance tracker"
+
+[tool.flet.app]
+module = "main"
+
+# Fill team_id after joining Apple Developer Program (Membership → Team ID).
+# Ad Hoc / development profiles must include your iPhone 12 UDID.
+[tool.flet.ios]
+# team_id = "YOUR10CHAR"
+# export_method = "release-testing"
+# signing_certificate = "Apple Distribution"
+# provisioning_profile = "Finanse Ad Hoc"
+
+[tool.flet.ios.info]
+NSFaceIDUsageDescription = "Unlock Finanse with Face ID"

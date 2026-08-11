@@ -1,0 +1,6 @@
+Alembic migrations for Finanse.
+
+- `alembic upgrade head` — apply migrations to the app database
+- `alembic revision --autogenerate -m "msg"` — generate a new revision
+
+Baseline revisions live in `versions/`.

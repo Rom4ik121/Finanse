@@ -1,0 +1,99 @@
+# Codemagic CI — build signed IPA for Finanse (Flet).
+# Docs: https://docs.codemagic.io/yaml-code-signing/signing-ios/
+#
+# Before first build in Codemagic UI:
+# 1) Connect this GitHub repo
+# 2) Code signing identities → upload Distribution cert + Ad Hoc profile
+#    (or link App Store Connect API key and fetch them)
+# 3) Environment variables group `finanse_ios`:
+#      APPLE_TEAM_ID = your 10-char Team ID
+# 4) Start workflow `ios-ipa`
+
+workflows:
+  ios-ipa:
+    name: Finanse iOS IPA (Ad Hoc)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      python: 3.12
+      xcode: latest
+      cocoapods: default
+      groups:
+        - finanse_ios
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: com.finanse.app
+      vars:
+        PACKAGE_NAME: com.finanse.app
+        APP_NAME: Finanse
+        APP_VERSION: "0.1.0"
+    scripts:
+      - name: Install Python dependencies
+        script: |
+          set -e
+          python3 -m pip install -U pip wheel
+          python3 -m pip install -U "flet[all]" -r requirements.txt
+          flet --version || python3 -m flet --version || true
+      - name: Set up code signing keychain
+        script: |
+          keychain initialize
+      - name: Build IPA with Flet
+        script: |
+          set -euo pipefail
+          if [ -z "${APPLE_TEAM_ID:-}" ]; then
+            echo "APPLE_TEAM_ID is missing. Add it to Codemagic group finanse_ios."
+            exit 1
+          fi
+
+          # Codemagic injects matching cert/profile from ios_signing above.
+          # Prefer Ad Hoc export for installing on a registered iPhone.
+          flet build ipa \
+            --org com.finanse.app \
+            --product "$APP_NAME" \
+            --build-version "$APP_VERSION" \
+            --build-number "${PROJECT_BUILD_NUMBER:-1}" \
+            --ios-team-id "$APPLE_TEAM_ID" \
+            --ios-export-method release-testing \
+            --ios-signing-certificate "Apple Distribution" \
+            --verbose
+      - name: Locate IPA
+        script: |
+          echo "Searching for IPA artifacts..."
+          find build -name "*.ipa" -print || true
+          ls -la build/ipa 2>/dev/null || true
+    artifacts:
+      - build/ipa/*.ipa
+      - build/**/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - $CM_REPO_OWNER_EMAIL
+        notify:
+          success: true
+          failure: true
+
+  # Unsigned / smoke path — useful to verify Flet builds before signing is ready.
+  ios-smoke:
+    name: Finanse iOS smoke (no signing)
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    environment:
+      python: 3.12
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install Python dependencies
+        script: |
+          python3 -m pip install -U pip wheel
+          python3 -m pip install -U "flet[all]" -r requirements.txt
+      - name: Build iOS project (may still need signing for IPA export)
+        script: |
+          set -e
+          # If this fails on binary wheels, fix deps before spending signed-build minutes.
+          flet build ipa --org com.finanse.app --product Finanse --verbose || \
+          flet build ios-simulator --org com.finanse.app --product Finanse --verbose
+    artifacts:
+      - build/**/*.ipa
+      - build/**/*.app
+      - /tmp/xcodebuild_logs/*.log

@@ -1,0 +1,11 @@
+[product]
+name = "Finanse"
+org = "com.finanse.app"
+description = "Personal finance tracker"
+version = "0.1.0"
+
+[app]
+module = "main"
+
+[flutter.pubspec.dependencies]
+# Reserved for future native plugins (local_auth, etc.)
