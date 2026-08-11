@@ -63,13 +63,8 @@ workflows:
       - build/ipa/*.ipa
       - build/**/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      email:
-        recipients:
-          - $CM_REPO_OWNER_EMAIL
-        notify:
-          success: true
-          failure: true
+    # Email notifications: enable in Codemagic UI (Settings → Notifications)
+    # or add a real address here, e.g. rpavlenko995@gmail.com
 
   # Unsigned / smoke path — useful to verify Flet builds before signing is ready.
   ios-smoke:
