@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 import flet as ft
 
-from lib.domain.entities.currency import Currency
+from lib.domain.entities.currency import Currency, ExchangeRate
 from lib.domain.entities.currency_codes import normalize_currency_code
 from lib.presentation.styles import card_surface, muted_text, page_header, section_title
 from lib.presentation.utils import format_date, format_money, run_async, safe_convert, snack, tr
@@ -26,6 +26,60 @@ def _format_rate(value: Decimal) -> str:
     if "." in text:
         text = text.rstrip("0").rstrip(".")
     return text or "0"
+
+
+def _rates_with_usd_cross(
+    base_rates: list,
+    usd_rates: list,
+    base: str,
+) -> list:
+    """Fill missing ``base→quote`` rows via the USD book (e.g. UZS→BTC)."""
+    base_code = str(base).upper()
+    merged = list(base_rates)
+    by_quote = {
+        str(getattr(rate, "quote", "")).upper(): rate
+        for rate in merged
+        if getattr(rate, "quote", None)
+    }
+    usd_per_base: Optional[Decimal] = None
+    usd_row = by_quote.get("USD")
+    if usd_row is not None and getattr(usd_row, "rate", None):
+        usd_per_base = Decimal(str(usd_row.rate))
+    if usd_per_base is None:
+        inverse = next(
+            (
+                rate
+                for rate in usd_rates
+                if str(getattr(rate, "quote", "")).upper() == base_code
+                and getattr(rate, "rate", None)
+            ),
+            None,
+        )
+        if inverse is not None and inverse.rate:
+            usd_per_base = Decimal("1") / Decimal(str(inverse.rate))
+    if usd_per_base is None or usd_per_base <= 0:
+        return merged
+
+    for usd_row in usd_rates:
+        quote = str(getattr(usd_row, "quote", "")).upper()
+        if not quote or quote == base_code or quote in by_quote:
+            continue
+        quote_rate = getattr(usd_row, "rate", None)
+        if not quote_rate:
+            continue
+        derived = usd_per_base * Decimal(str(quote_rate))
+        if derived <= 0:
+            continue
+        merged.append(
+            ExchangeRate(
+                base=base_code,
+                quote=quote,
+                rate=derived,
+                updated_at=usd_row.updated_at,
+            )
+        )
+        by_quote[quote] = merged[-1]
+    return merged
 
 
 def _matches_query(currency: Currency, query: str) -> bool:
@@ -72,6 +126,7 @@ class CurrenciesPage(ft.Column):
             lang=lang,
             label=tr("currencies.from", lang),
             value=base,
+            include_crypto=True,
             on_changed=lambda _code: run_async(page, self._recalculate),
         )
         self._to_picker = CurrencyTickerPicker(
@@ -79,6 +134,7 @@ class CurrenciesPage(ft.Column):
             lang=lang,
             label=tr("currencies.to", lang),
             value=default_quote,
+            include_crypto=True,
             on_changed=lambda _code: run_async(page, self._recalculate),
         )
         self._result_value = ft.Text(
@@ -271,10 +327,10 @@ class CurrenciesPage(ft.Column):
                 self._state.container, amount, src, dst
             )
             one_forward = await safe_convert(
-                self._state.container, Decimal("1"), src, dst
+                self._state.container, Decimal("1"), src, dst, quantize=False
             )
             one_reverse = await safe_convert(
-                self._state.container, Decimal("1"), dst, src
+                self._state.container, Decimal("1"), dst, src, quantize=False
             )
 
             if converted is None or one_forward is None or one_reverse is None:
@@ -410,6 +466,12 @@ class CurrenciesPage(ft.Column):
             rates = []
             if repo is not None and hasattr(repo, "list_rates"):
                 rates = await repo.list_rates(base=base)
+                usd_book = (
+                    await repo.list_rates(base="USD")
+                    if str(base).upper() != "USD"
+                    else []
+                )
+                rates = _rates_with_usd_cross(rates, usd_book, base)
             elif repo is not None and hasattr(repo, "list_all_rates"):
                 rates = await repo.list_all_rates()
         except Exception as exc:  # noqa: BLE001

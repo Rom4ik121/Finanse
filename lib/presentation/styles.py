@@ -13,6 +13,11 @@ CARD_RADIUS = 18
 CHIP_RADIUS = 14
 SECTION_GAP = 14
 
+# Catalog tiles: white line-art on muted sage circles (account / category pickers).
+ICON_CATALOG_BADGE = "#8FA89A"
+ICON_CATALOG_BADGE_SELECTED = "#6B8A7A"
+ICON_CATALOG_GLYPH = "#FFFFFF"
+
 
 def card_surface(
     content: ft.Control,
@@ -209,8 +214,47 @@ def shortcut_chip(
     on_click: Optional[ft.ControlEventHandler] = None,
     width: int | None = None,
     expand: bool = True,
+    badge: int = 0,
 ) -> ft.Container:
     """Quick-nav tile that stretches inside a responsive grid."""
+    icon_box = ft.Container(
+        width=34,
+        height=34,
+        border_radius=11,
+        bgcolor=ft.Colors.PRIMARY_CONTAINER,
+        alignment=ft.Alignment.CENTER,
+        content=ft.Icon(icon, color=ft.Colors.ON_PRIMARY_CONTAINER, size=18),
+    )
+    if badge > 0:
+        label_count = "9+" if badge > 9 else str(badge)
+        icon_area: ft.Control = ft.Stack(
+            width=40,
+            height=40,
+            clip_behavior=ft.ClipBehavior.NONE,
+            controls=[
+                ft.Container(alignment=ft.Alignment.CENTER, content=icon_box),
+                ft.Container(
+                    right=0,
+                    top=0,
+                    content=ft.Container(
+                        width=18,
+                        height=18,
+                        border_radius=9,
+                        bgcolor=ft.Colors.ERROR,
+                        alignment=ft.Alignment.CENTER,
+                        content=ft.Text(
+                            label_count,
+                            size=10,
+                            weight=ft.FontWeight.W_800,
+                            color=ft.Colors.ON_ERROR,
+                        ),
+                    ),
+                ),
+            ],
+        )
+    else:
+        icon_area = icon_box
+
     return ft.Container(
         width=width,
         expand=expand,
@@ -225,14 +269,7 @@ def shortcut_chip(
             spacing=6,
             tight=True,
             controls=[
-                ft.Container(
-                    width=34,
-                    height=34,
-                    border_radius=11,
-                    bgcolor=ft.Colors.PRIMARY_CONTAINER,
-                    alignment=ft.Alignment.CENTER,
-                    content=ft.Icon(icon, color=ft.Colors.ON_PRIMARY_CONTAINER, size=18),
-                ),
+                icon_area,
                 ft.Text(
                     label,
                     size=11,
@@ -244,6 +281,31 @@ def shortcut_chip(
             ],
         ),
     )
+
+
+def alert_corner(
+    *,
+    tooltip: str = "",
+) -> ft.Container:
+    """Red exclamation badge for the top-right corner of a card Stack."""
+    return ft.Container(
+        right=4,
+        top=4,
+        tooltip=tooltip or None,
+        content=ft.Container(
+            width=24,
+            height=24,
+            border_radius=12,
+            bgcolor=ft.Colors.ERROR,
+            alignment=ft.Alignment.CENTER,
+            content=ft.Icon(
+                ft.Icons.PRIORITY_HIGH,
+                size=14,
+                color=ft.Colors.ON_ERROR,
+            ),
+        ),
+    )
+
 
 
 def amount_color(is_income: bool, *, dark: bool = True) -> str:

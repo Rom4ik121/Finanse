@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Optional
 
-from lib.domain.entities.subscription import Subscription
+from lib.domain.entities.subscription import Subscription, SubscriptionStatus
 
 
 class SubscriptionRepository(ABC):
@@ -34,6 +34,7 @@ class SubscriptionRepository(ABC):
         *,
         active_only: bool = False,
         account_id: Optional[str] = None,
+        status: Optional[SubscriptionStatus] = None,
     ) -> list[Subscription]:
         """List subscriptions with optional filters."""
 

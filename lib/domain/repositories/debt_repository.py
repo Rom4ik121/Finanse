@@ -31,10 +31,16 @@ class DebtRepository(ABC):
     async def list(
         self,
         *,
-        status: Optional[DebtStatus] = None,
-        direction: Optional[DebtDirection] = None,
+        status: Optional[DebtStatus | str] = None,
+        direction: Optional[DebtDirection | str] = None,
+        currency: Optional[str] = None,
+        sort_by: str = "due_date",
     ) -> list[Debt]:
-        """List debts with optional filters."""
+        """List debts with optional filters and sorting.
+
+        ``sort_by``: ``due_date`` | ``remaining`` | ``amount`` | ``interest`` |
+        ``created_at`` | ``counterparty`` | ``status``.
+        """
 
     async def list_all(self) -> list[Debt]:
         """Compatibility helper — list every debt."""

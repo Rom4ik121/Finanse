@@ -44,6 +44,7 @@ def load_currency_catalog(*, include_crypto: bool = False) -> list[dict[str, str
                 "name_ru": name_ru,
                 "name_en": name_en,
                 "name_uz": name_uz,
+                "symbol": str(item.get("symbol") or code),
             }
         )
     return rows

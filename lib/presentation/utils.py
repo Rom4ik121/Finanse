@@ -107,23 +107,76 @@ def category_icon(name: str | None) -> ft.IconData:
     return resolve_icon(name, default="category")
 
 
+_RATE_BOOK_TTL_SECONDS = 90.0
+_rate_book_cache: dict[int, tuple[float, "RateBook"]] = {}
+
+
+def invalidate_rate_book_cache() -> None:
+    """Drop cached FX books (call after rates update)."""
+    _rate_book_cache.clear()
+
+
+async def load_rate_book(container: Any, *, force: bool = False) -> "RateBook":
+    """Load stored FX rows with a short in-memory cache for UI screens."""
+    import time
+
+    from lib.domain.services.rate_book import RateBook
+
+    repo = getattr(container, "currency_repository", None)
+    if repo is None or not hasattr(repo, "list_rates"):
+        return RateBook(())
+    cache_key = id(repo)
+    now = time.monotonic()
+    if not force:
+        cached = _rate_book_cache.get(cache_key)
+        if cached is not None:
+            stamp, book = cached
+            if now - stamp < _RATE_BOOK_TTL_SECONDS:
+                return book
+    try:
+        rates = await repo.list_rates()
+    except Exception:  # noqa: BLE001
+        return RateBook(())
+    book = RateBook(rates)
+    _rate_book_cache[cache_key] = (now, book)
+    return book
+
+
 async def safe_convert(
     container: Any,
     amount: Decimal,
     from_currency: str,
     to_currency: str,
+    *,
+    quantize: bool = True,
+    rate_book: Any = None,
 ) -> Optional[Decimal]:
-    """Convert via use case when available; return None on failure."""
+    """Convert via in-memory ``rate_book`` or use case; return None on failure."""
+    if rate_book is not None:
+        return rate_book.convert(
+            amount, from_currency, to_currency, quantize=quantize
+        )
     uc = getattr(container, "convert_currency", None)
     if uc is None:
         return None
     if from_currency.upper() == to_currency.upper():
-        return Decimal(str(amount)).quantize(Decimal("0.01"))
+        value = Decimal(str(amount))
+        return value.quantize(Decimal("0.01")) if quantize else value
     try:
         return await uc.execute(
             Decimal(str(amount)),
             from_currency=from_currency,
             to_currency=to_currency,
+            quantize=quantize,
         )
+    except TypeError:
+        try:
+            return await uc.execute(
+                Decimal(str(amount)),
+                from_currency=from_currency,
+                to_currency=to_currency,
+            )
+        except Exception:  # noqa: BLE001
+            return None
     except Exception:  # noqa: BLE001
         return None

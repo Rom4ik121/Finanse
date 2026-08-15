@@ -40,9 +40,35 @@ def test_schedule_debt_reminders() -> None:
         due_date=due,
         status=DebtStatus.ACTIVE,
     )
-    created = svc.schedule_debt_reminders([debt])
+    created = svc.schedule_debt_reminders([debt], language="ru")
     assert created
     assert created[0].kind is NotificationKind.DEBT_REMINDER
+    assert created[0].title == "Скоро срок погашения долга"
+
+
+def test_schedule_overdue_debt_reminders() -> None:
+    svc = NotificationService(default_lead_days=3)
+    due = datetime.now(timezone.utc) - timedelta(days=1)
+    debt = Debt(
+        counterparty="Bank",
+        amount=100,
+        remaining_amount=100,
+        direction=DebtDirection.I_OWE,
+        due_date=due,
+        status=DebtStatus.ACTIVE,
+    )
+    created = svc.schedule_debt_reminders([debt], language="ru")
+    assert created
+    assert created[0].kind is NotificationKind.DEBT_REMINDER
+
+
+def test_clear_kinds() -> None:
+    svc = NotificationService()
+    svc.push("A", "B", kind=NotificationKind.DEBT_REMINDER)
+    svc.push("C", "D", kind=NotificationKind.INFO)
+    assert svc.clear_kinds(NotificationKind.DEBT_REMINDER) == 1
+    assert len(svc.list_all()) == 1
+    assert svc.list_all()[0].kind is NotificationKind.INFO
 
 
 def test_schedule_subscription_reminders() -> None:

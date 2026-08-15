@@ -36,11 +36,16 @@ class AppState:
         self.dashboard_token: int = 0
         self.transactions_token: int = 0
         self.accounts_token: int = 0
+        self.goals_token: int = 0
+        self.debts_token: int = 0
+        self.subscriptions_token: int = 0
+        self.analytics_token: int = 0
         self.is_loading: bool = False
         self.is_unlocked: bool = True
         self.pending_notifications: list[str] = []
         self.view_rebuild_token: int = 0
         self._listeners: list[Listener] = []
+        self._notify_scheduled: bool = False
 
     # ------------------------------------------------------------------
     # Observer
@@ -58,13 +63,68 @@ class AppState:
         except ValueError:
             pass
 
-    def notify(self) -> None:
-        """Notify all subscribers that state has changed."""
+    def notify(self, *, coalesce: bool = False) -> None:
+        """Notify all subscribers that state has changed.
+
+        When ``coalesce`` is True, multiple rapid bumps collapse into one notify
+        on the next event-loop turn (reduces cascading UI reloads on phones).
+        """
+        if coalesce:
+            if self._notify_scheduled:
+                return
+            self._notify_scheduled = True
+            try:
+                import asyncio
+
+                loop = asyncio.get_running_loop()
+
+                def _flush() -> None:
+                    self._notify_scheduled = False
+                    self.notify(coalesce=False)
+
+                loop.call_soon(_flush)
+                return
+            except RuntimeError:
+                self._notify_scheduled = False
         for listener in list(self._listeners):
             try:
                 listener(self)
             except Exception:  # noqa: BLE001 — UI must stay alive
                 logger.exception("AppState listener failed")
+
+    def bump_refresh(self, *scopes: str) -> None:
+        """Increment refresh tokens so listening pages reload data.
+
+        Args:
+            scopes: Optional scopes such as ``dashboard``, ``transactions``,
+                ``accounts``, ``goals``, ``debts``, ``subscriptions``,
+                ``analytics``. Empty means global refresh of primary tabs.
+        """
+        self.refresh_token += 1
+        if not scopes:
+            self.dashboard_token += 1
+            self.transactions_token += 1
+            self.accounts_token += 1
+            self.goals_token += 1
+            self.debts_token += 1
+            self.subscriptions_token += 1
+            self.analytics_token += 1
+        else:
+            if "dashboard" in scopes:
+                self.dashboard_token += 1
+            if "transactions" in scopes:
+                self.transactions_token += 1
+            if "accounts" in scopes:
+                self.accounts_token += 1
+            if "goals" in scopes:
+                self.goals_token += 1
+            if "debts" in scopes:
+                self.debts_token += 1
+            if "subscriptions" in scopes:
+                self.subscriptions_token += 1
+            if "analytics" in scopes:
+                self.analytics_token += 1
+        self.notify(coalesce=True)
 
     # ------------------------------------------------------------------
     # Mutators
@@ -106,22 +166,6 @@ class AppState:
     def close_secondary(self) -> None:
         """Return from a secondary screen to the primary tab content."""
         self.secondary_route = None
-        self.notify()
-
-    def bump_refresh(self, *scopes: str) -> None:
-        """Increment refresh tokens so listening pages reload data.
-
-        Args:
-            scopes: Optional scopes such as ``dashboard``, ``transactions``,
-                ``accounts``. Empty means global refresh.
-        """
-        self.refresh_token += 1
-        if not scopes or "dashboard" in scopes:
-            self.dashboard_token += 1
-        if not scopes or "transactions" in scopes:
-            self.transactions_token += 1
-        if not scopes or "accounts" in scopes:
-            self.accounts_token += 1
         self.notify()
 
     def set_loading(self, value: bool) -> None:

@@ -54,21 +54,75 @@ def _currency_catalog() -> tuple[dict[str, str], ...]:
     return tuple(rows)
 
 
+# Distinct 1–2 character marks for well-known coins (catalog tiles).
+_CRYPTO_GLYPHS: dict[str, str] = {
+    "BTC": "₿",
+    "ETH": "Ξ",
+    "USDT": "₮",
+    "USDC": "$",
+    "BNB": "B",
+    "XRP": "✕",
+    "SOL": "S",
+    "TRX": "T",
+    "DOGE": "Ð",
+    "LTC": "Ł",
+    "XMR": "ɱ",
+    "ZEC": "ⓩ",
+    "ADA": "A",
+    "DOT": "●",
+    "TON": "◎",
+    "SHIB": "š",
+    "PEPE": "P",
+    "DAI": "◈",
+    "LINK": "⬡",
+    "AVAX": "A",
+    "MATIC": "M",
+    "POL": "M",
+    "ATOM": "⚛",
+    "XLM": "*",
+    "BCH": "฿",
+    "ETC": "ξ",
+    "FIL": "⨎",
+    "UNI": "U",
+    "AAVE": "A",
+    "NEAR": "N",
+    "APT": "A",
+    "ARB": "A",
+    "SUI": "S",
+    "HBAR": "ℏ",
+    "CRO": "C",
+    "OKB": "O",
+    "KCS": "K",
+    "ALGO": "A",
+    "QNT": "Q",
+    "RENDER": "R",
+    "JUP": "J",
+    "PI": "π",
+    "KAS": "K",
+    "MNT": "M",
+    "TAO": "τ",
+    "PAXG": "Au",
+    "XAUT": "Au",
+}
+
+
 def currency_glyph_label(code: str, symbol: str | None = None) -> str:
-    """Short label for a currency tile (symbol if compact, else code)."""
+    """Short label for a currency tile (symbol if compact, else ticker)."""
     code = code.upper()
+    glyph = _CRYPTO_GLYPHS.get(code)
+    if glyph:
+        return glyph
     if symbol is None:
         for row in _currency_catalog():
             if row["code"] == code:
                 symbol = row["symbol"]
                 break
     text = (symbol or code).strip()
-    # Prefer readable glyph; fall back to ISO code when symbol is verbose.
     if text and len(text) <= 2:
         return text
     if text and len(text) <= 3 and not text.isascii():
         return text
-    return code[:4]
+    return code if len(code) <= 4 else code[:4]
 
 
 def account_icon_groups() -> tuple[tuple[str, tuple[str, ...]], ...]:
@@ -95,6 +149,15 @@ def all_account_icon_keys() -> tuple[str, ...]:
     for _label, group in account_icon_groups():
         keys.extend(group)
     return tuple(dict.fromkeys(keys))
+
+
+def crypto_icon_keys() -> tuple[str, ...]:
+    """Stored keys for every crypto ticker in the bundled catalog."""
+    return tuple(
+        currency_icon_key(row["code"])
+        for row in _currency_catalog()
+        if row["is_crypto"] == "1"
+    )
 
 
 def is_valid_account_icon(key: str | None) -> bool:

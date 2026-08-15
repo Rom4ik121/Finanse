@@ -6,7 +6,10 @@ import logging
 import os
 import sys
 from enum import Enum
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    import flet as ft
 
 logger = logging.getLogger("finanse.infrastructure.services.biometric")
 
@@ -75,15 +78,68 @@ def biometric_env_override_ok() -> bool:
 
 def mobile_runtime() -> bool:
     """True when Python runs inside a packaged Flet Android / iOS app."""
-    return os.getenv("FLET_PLATFORM", "").strip().lower() in {"android", "ios"}
+    platform = os.getenv("FLET_PLATFORM", "").strip().lower()
+    if platform in {"android", "ios"}:
+        return True
+    if sys.platform in {"android", "ios"}:
+        return True
+    if sys.platform == "linux":
+        try:
+            import platform as py_platform
+
+            if hasattr(py_platform, "android_ver"):
+                info = py_platform.android_ver()
+                if info and info.manufacturer:
+                    return True
+        except Exception:  # noqa: BLE001
+            pass
+    return False
+
+
+def is_mobile_platform(page: "ft.Page | None" = None) -> bool:
+    """Best-effort mobile detection for biometric registration."""
+    if mobile_runtime():
+        return True
+    if page is None:
+        return False
+    try:
+        from flet import PagePlatform
+
+        return page.platform in {
+            PagePlatform.ANDROID,
+            PagePlatform.ANDROID_TV,
+            PagePlatform.IOS,
+        }
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def register_local_auth_service(page: "ft.Page") -> bool:
+    """Attach the Flet local_auth bridge and keep a strong reference."""
+    if not is_mobile_platform(page):
+        return False
+    try:
+        from flet_local_auth import FinanseLocalAuth
+
+        auth = FinanseLocalAuth()
+        page.add(auth)
+        page.update()
+        set_local_auth_service(auth)
+        logger.info("Mobile biometric service registered (platform=%s)", page.platform)
+        return True
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed to register mobile biometric service")
+        return False
 
 
 def platform_supports_biometrics() -> bool:
     """True when this build can talk to an OS biometric API."""
     if biometric_env_override_ok():
         return True
+    if _local_auth_service is not None:
+        return True
     if mobile_runtime():
-        return _local_auth_service is not None
+        return False
     if sys.platform != "win32":
         return False
     try:
@@ -153,10 +209,13 @@ async def probe_biometric_status() -> BiometricStatus:
     """Ask the OS whether biometrics can be used."""
     if biometric_env_override_ok():
         return BiometricStatus.AVAILABLE
-    if mobile_runtime():
+    if _local_auth_service is not None:
         status = await _probe_mobile_status()
         logger.info("Mobile biometric availability: %s", status.value)
         return status
+    if mobile_runtime():
+        logger.warning("Mobile runtime detected but local_auth service is missing")
+        return BiometricStatus.UNSUPPORTED
     if sys.platform != "win32":
         return BiometricStatus.UNSUPPORTED
     try:
@@ -192,10 +251,14 @@ async def request_biometric_verification(message: str) -> BiometricResult:
         logger.info("Biometric accepted via FINANCE_BIOMETRIC_OK")
         return BiometricResult.VERIFIED
 
-    if mobile_runtime():
+    if _local_auth_service is not None:
         result = await _request_mobile_verification(message)
         logger.info("Mobile biometric verification result: %s", result.value)
         return result
+
+    if mobile_runtime():
+        logger.warning("Mobile runtime detected but local_auth service is missing")
+        return BiometricResult.UNSUPPORTED
 
     if sys.platform != "win32":
         return BiometricResult.UNSUPPORTED

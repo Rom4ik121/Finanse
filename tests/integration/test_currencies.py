@@ -56,6 +56,44 @@ def test_convert_inverse_rate(container) -> None:
     run_async(_run())
 
 
+def test_convert_cross_via_app_base(container) -> None:
+    """BTC/USD is not stored; convert through UZS→BTC and UZS→USD."""
+
+    async def _run() -> None:
+        await container.update_exchange_rates.execute(
+            rates=[
+                ExchangeRate(
+                    base="UZS",
+                    quote="USD",
+                    rate=Decimal("0.00008"),
+                    updated_at=datetime.now(timezone.utc),
+                ),
+                ExchangeRate(
+                    base="UZS",
+                    quote="BTC",
+                    rate=Decimal("0.0000000008"),
+                    updated_at=datetime.now(timezone.utc),
+                ),
+            ]
+        )
+        converted = await container.convert_currency.execute(
+            Decimal("1"),
+            from_currency="BTC",
+            to_currency="USD",
+        )
+        assert converted == Decimal("100000.00")
+
+        unit = await container.convert_currency.execute(
+            Decimal("1"),
+            from_currency="UZS",
+            to_currency="USD",
+            quantize=False,
+        )
+        assert unit == Decimal("0.00008")
+
+    run_async(_run())
+
+
 def test_convert_same_currency(container) -> None:
     async def _run() -> None:
         result = await container.convert_currency.execute(

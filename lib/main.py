@@ -13,6 +13,7 @@ from lib.core.config import AppConfig, get_default_config
 from lib.core.database import init_db
 from lib.core.dependencies import Container, build_container
 from lib.core.logging_config import setup_logging
+from lib.infrastructure.services.localization import normalize_lang
 from lib.presentation.app import FinanseApp
 
 logger = logging.getLogger("finanse.main")
@@ -47,11 +48,6 @@ async def _seed_if_needed(container: Container) -> None:
             await container.get_settings.execute()
     except Exception:  # noqa: BLE001
         logger.exception("Settings seed/load failed")
-
-    try:
-        await _seed_categories(container)
-    except Exception:  # noqa: BLE001
-        logger.exception("Category seed failed")
 
     try:
         if container.list_accounts is None or container.create_account is None:
@@ -92,38 +88,6 @@ async def _seed_if_needed(container: Container) -> None:
         logger.exception("Default account seed failed")
 
 
-async def _seed_categories(container: Container) -> None:
-    """Insert default categories when the catalog is empty."""
-    if container.list_categories is None or container.create_category is None:
-        return
-    existing = await container.list_categories.execute(active_only=False)
-    if existing:
-        return
-    from lib.core.config import DEFAULT_CATEGORY_SEED
-    from lib.domain.entities.category import Category, CategoryKind
-    from lib.infrastructure.services.localization import localize_category_name
-
-    lang = container.config.language
-    if container.get_settings is not None:
-        try:
-            settings = await container.get_settings.execute()
-            if settings is not None:
-                lang = settings.language
-        except Exception:  # noqa: BLE001
-            pass
-
-    for name, kind, icon, color in DEFAULT_CATEGORY_SEED:
-        await container.create_category.execute(
-            Category(
-                name=localize_category_name(name, lang),
-                kind=CategoryKind(kind),
-                icon=icon,
-                color=color,
-                is_system=True,
-            )
-        )
-    logger.info("Seeded %d default categories", len(DEFAULT_CATEGORY_SEED))
-
 async def _exchange_rate_loop(container: Container) -> None:
     """Periodically refresh FX rates while the app is running."""
     while True:
@@ -141,6 +105,12 @@ async def _exchange_rate_loop(container: Container) -> None:
                 base = container.config.default_currency
             if container.update_exchange_rates is not None:
                 await container.update_exchange_rates.execute(base=base)
+                try:
+                    from lib.presentation.utils import invalidate_rate_book_cache
+
+                    invalidate_rate_book_cache()
+                except Exception:  # noqa: BLE001
+                    pass
                 logger.info("Exchange rates updated (base=%s)", base)
         except asyncio.CancelledError:
             raise
@@ -150,14 +120,24 @@ async def _exchange_rate_loop(container: Container) -> None:
 
 
 def _parse_hhmm(value: str) -> tuple[int, int]:
-    parts = (value or "09:00").split(":")
-    return int(parts[0]), int(parts[1])
+    parts = (value or "09:00").strip().split(":")
+    if len(parts) != 2:
+        return 9, 0
+    try:
+        hour = int(parts[0])
+        minute = int(parts[1])
+    except ValueError:
+        return 9, 0
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return 9, 0
+    return hour, minute
 
 
 async def _reminder_loop(container: Container) -> None:
     """Daily in-app reminder sweep for debts and subscriptions."""
     last_run_date: Optional[str] = None
     while True:
+        sleep_for = 60.0
         try:
             settings = (
                 await container.get_settings.execute()
@@ -168,6 +148,9 @@ async def _reminder_loop(container: Container) -> None:
                 hour, minute = _parse_hhmm(settings.reminder_time)
                 now_local = datetime.now()
                 stamp = now_local.strftime("%Y-%m-%d")
+                target = now_local.replace(
+                    hour=hour, minute=minute, second=0, microsecond=0
+                )
                 if (
                     now_local.hour == hour
                     and now_local.minute == minute
@@ -175,52 +158,63 @@ async def _reminder_loop(container: Container) -> None:
                 ):
                     notifier = container.notification_service
                     if notifier is not None:
-                        if settings.debt_reminders and container.list_debts:
-                            debts = await container.list_debts.execute()
-                            notifier.schedule_debt_reminders(debts)
-                        if settings.subscription_reminders and container.list_subscriptions:
-                            subs = await container.list_subscriptions.execute(
-                                active_only=True
-                            )
-                            notifier.schedule_subscription_reminders(subs)
+                        lang = normalize_lang(settings.language)
+                        await schedule_reminders(
+                            container,
+                            settings,
+                            language=lang,
+                        )
                         pending = notifier.list_pending()
                         logger.info(
                             "Reminder sweep created/pending=%d", len(pending)
                         )
                     last_run_date = stamp
+                    sleep_for = 55.0
+                else:
+                    delta = (target - now_local).total_seconds()
+                    if delta <= 0:
+                        # Next day target.
+                        delta += 24 * 3600
+                    # Wake near the reminder minute, but never sleep longer than 15m
+                    # so setting changes still apply reasonably fast.
+                    sleep_for = max(20.0, min(delta, 15 * 60))
+            else:
+                sleep_for = 5 * 60
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001
             logger.exception("Reminder loop failed")
-        await asyncio.sleep(30)
+            sleep_for = 60.0
+        await asyncio.sleep(sleep_for)
 
 
 async def _flet_main(page: ft.Page) -> None:
     """Async Flet target: wire container, background task, UI."""
     global _rate_task, _reminder_task
 
-    from lib.infrastructure.services.biometric import (
-        mobile_runtime,
-        set_local_auth_service,
+    from lib.presentation.widgets.splash_screen import build_launch_splash
+
+    page.padding = 0
+    page.bgcolor = "#000000"
+    page.add(build_launch_splash())
+    page.update()
+
+    from lib.infrastructure.services.biometric import register_local_auth_service
+    from lib.infrastructure.services.push_notifier import (
+        register_android_notifications,
+        request_push_permissions,
     )
 
-    _local_auth_control = None
-    if mobile_runtime():
-        try:
-            from flet_local_auth import FinanseLocalAuth
-
-            _local_auth_control = FinanseLocalAuth()
-            page.add(_local_auth_control)
-            set_local_auth_service(_local_auth_control)
-            logger.info("Mobile biometric service registered")
-        except Exception:  # noqa: BLE001
-            logger.exception("Failed to register mobile biometric service")
+    register_local_auth_service(page)
+    register_android_notifications(page)
 
     config = get_default_config()
     setup_logging(log_dir=config.log_dir)
     init_db(config)
     container = build_container(config, init_database=False)
     await _seed_if_needed(container)
+
+    from lib.infrastructure.services.reminder_scheduler import schedule_reminders
 
     if _rate_task is None or _rate_task.done():
         _rate_task = page.run_task(_exchange_rate_loop, container)
@@ -229,25 +223,32 @@ async def _flet_main(page: ft.Page) -> None:
 
     try:
         if container.process_due_subscriptions is not None:
-            await container.process_due_subscriptions.execute()
+            settings = await container.get_settings.execute()
+            await container.process_due_subscriptions.execute(
+                language=normalize_lang(settings.language),
+                notifier=container.notification_service,
+            )
     except Exception:  # noqa: BLE001
         logger.exception("process_due_subscriptions failed")
 
     # Eager reminder scheduling on startup (not only at reminder_time).
     try:
         settings = await container.get_settings.execute()
-        notifier = container.notification_service
-        if settings.notifications_enabled and notifier is not None:
-            if settings.debt_reminders and container.list_debts:
-                notifier.schedule_debt_reminders(await container.list_debts.execute())
-            if settings.subscription_reminders and container.list_subscriptions:
-                notifier.schedule_subscription_reminders(
-                    await container.list_subscriptions.execute(active_only=True)
-                )
+        if settings.notifications_enabled:
+            try:
+                await request_push_permissions()
+            except Exception:  # noqa: BLE001
+                logger.exception("Push permission request failed")
+        await schedule_reminders(
+            container,
+            settings,
+            language=normalize_lang(settings.language),
+        )
     except Exception:  # noqa: BLE001
         logger.exception("Startup reminder scheduling failed")
 
     app = FinanseApp(page, container)
+    page.controls.clear()
     await app.start()
 
 

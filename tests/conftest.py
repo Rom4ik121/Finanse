@@ -16,6 +16,12 @@ from lib.core.dependencies import Container, build_container
 T = TypeVar("T")
 
 
+@pytest.fixture(autouse=True)
+def _disable_os_push(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep unit/integration tests from firing real OS toasts."""
+    monkeypatch.setenv("FINANCE_DISABLE_PUSH", "1")
+
+
 @pytest.fixture()
 def container(tmp_path: Path) -> Container:
     """Isolated SQLite-backed DI container per test."""

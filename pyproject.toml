@@ -18,6 +18,8 @@ dependencies = [
   "greenlet>=3.1.0",
   "platformdirs>=4.0.0",
   "alembic>=1.14.0",
+  "flet-local-auth",
+  "flet-android-notifications>=0.10.0",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +28,7 @@ windows = [
   "winrt-runtime>=3.0.0",
   "winrt-Windows.Foundation>=3.0.0",
   "winrt-Windows.Security.Credentials.UI>=3.0.0",
+  "winotify>=1.1.0",
 ]
 
 [tool.flet]
@@ -42,6 +45,23 @@ flet-local-auth = "./extensions/flet_local_auth"
 [tool.flet.android.permission]
 "android.permission.USE_BIOMETRIC" = true
 "android.permission.USE_FINGERPRINT" = true
+"android.permission.POST_NOTIFICATIONS" = true
+"android.permission.VIBRATE" = true
+"android.permission.RECEIVE_BOOT_COMPLETED" = true
+"android.permission.SCHEDULE_EXACT_ALARM" = true
+"android.permission.USE_EXACT_ALARM" = true
+"android.permission.WAKE_LOCK" = true
+
+[tool.flet.flutter.pubspec.dependencies]
+local_auth = "^2.3.0"
+local_auth_android = "^1.0.46"
+local_auth_darwin = "^1.4.1"
+
+[tool.flet.splash]
+color = "#000000"
+dark_color = "#000000"
+icon_bgcolor = "#000000"
+icon_dark_bgcolor = "#000000"
 
 # Fill team_id after joining Apple Developer Program (Membership → Team ID).
 # Ad Hoc / development profiles must include your iPhone 12 UDID.

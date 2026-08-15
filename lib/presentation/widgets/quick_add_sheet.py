@@ -101,6 +101,8 @@ async def _show_form(
         tx_type=default_type.value,
     )
     await category_picker.reload()
+    if category_picker.is_empty:
+        category_picker.prompt_if_empty()
 
     def _on_type(_e: ft.ControlEvent) -> None:
         category_picker.set_tx_type(type_dd.value or TransactionType.EXPENSE.value)

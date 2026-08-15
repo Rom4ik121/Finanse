@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from lib.domain.entities.goal import Goal
+from lib.domain.entities.goal import Goal, GoalStatus
 
 
 class GoalRepository(ABC):
@@ -31,20 +31,26 @@ class GoalRepository(ABC):
     async def list(
         self,
         *,
+        status: Optional[GoalStatus | str] = None,
         include_completed: bool = True,
+        currency: Optional[str] = None,
         min_priority: Optional[int] = None,
+        sort_by: str = "priority",
     ) -> list[Goal]:
-        """List goals with optional filters."""
+        """List goals with optional status/currency filters and sorting.
+
+        ``sort_by``: ``priority`` | ``deadline`` | ``progress`` | ``created_at``.
+        When ``status`` is set it takes precedence over ``include_completed``.
+        """
 
     async def list_all(self) -> list[Goal]:
         """Compatibility helper — list every goal."""
         return await self.list(include_completed=True)
 
     async def list_active(self) -> list[Goal]:
-        """Compatibility helper — incomplete goals only."""
-        return await self.list(include_completed=False)
+        """Compatibility helper — active (incomplete) goals only."""
+        return await self.list(status=GoalStatus.ACTIVE)
 
     async def list_completed(self) -> list[Goal]:
         """Compatibility helper — completed goals only."""
-        goals = await self.list(include_completed=True)
-        return [g for g in goals if g.is_completed]
+        return await self.list(status=GoalStatus.COMPLETED)

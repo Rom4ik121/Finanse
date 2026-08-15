@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -13,8 +14,10 @@ from lib.core.config import SAVINGS_CATEGORIES
 from lib.domain.entities.category import CategoryKind
 from lib.domain.entities.transaction import Transaction, TransactionType
 from lib.domain.use_cases.transactions import StatsPeriod
+from lib.infrastructure.services.localization import localize_category_name
+from lib.infrastructure.services.notification_service import NotificationKind
 from lib.presentation.styles import page_header
-from lib.presentation.utils import format_date, run_async, safe_update, snack, tr
+from lib.presentation.utils import format_date, format_money, run_async, safe_update, snack, tr
 from lib.presentation.widgets.category_picker import CategoryPicker
 from lib.presentation.widgets.confirm_dialog import confirm_dialog
 from lib.presentation.widgets.date_time_field import DateTimeField
@@ -25,6 +28,9 @@ from lib.presentation.widgets.transaction_tile import TransactionTile
 
 if TYPE_CHECKING:
     from lib.presentation.state.app_state import AppState
+
+_PAGE_SIZE = 60
+_SEARCH_SCAN_LIMIT = 800
 
 
 def _parse_date(value: str, *, end_of_day: bool = False) -> Optional[datetime]:
@@ -53,6 +59,16 @@ def _period_key(dt: datetime, group_by: str) -> str:
     return format_date(dt)
 
 
+def _matches_query(tx: Transaction, query: str) -> bool:
+    if not query:
+        return True
+    if query in tx.category.lower():
+        return True
+    if query in (tx.comment or "").lower():
+        return True
+    return any(query in tag.lower() for tag in (tx.tags or []))
+
+
 class TransactionsPage(ft.Column):
     """Searchable / filterable transaction list with day/week/month grouping."""
 
@@ -60,15 +76,21 @@ class TransactionsPage(ft.Column):
         self._page = page
         self._state = state
         self._token = -1
+        self._meta_token = -1
         self._accounts: list = []
         self._goals: list = []
         self._category_map: dict[str, object] = {}
         self._list = ft.Column(spacing=6, expand=True, scroll=ft.ScrollMode.AUTO)
+        self._offset = 0
+        self._has_more = False
+        self._shown: list[Transaction] = []
+        self._search_cache: list[Transaction] = []
+        self._search_gen = 0
         lang = state.language
         self._search = ft.TextField(
             label=tr("field.search", lang),
             prefix_icon=ft.Icons.SEARCH,
-            on_change=lambda _e: run_async(page, self.reload),
+            on_change=lambda _e: run_async(page, self._debounced_search),
             dense=True,
             border_radius=12,
             filled=True,
@@ -242,115 +264,72 @@ class TransactionsPage(ft.Column):
             allow_clear=True,
         )
 
-        def _apply(_e: ft.ControlEvent) -> None:
+        async def _apply() -> None:
             self._type_value = type_dd.value or "all"
             self._category_value = category_dd.value or "all"
             self._group_by_value = group_dd.value or StatsPeriod.DAY.value
             self._date_from_value = date_from.date_text
             self._date_to_value = date_to.date_text
-            self._page.pop_dialog()
+            close()
             self._filter_summary.value = self._filter_summary_text()
             safe_update(self._filter_summary)
-            run_async(self._page, self.reload)
+            await self.reload()
 
-        def _reset(_e: ft.ControlEvent) -> None:
+        def _reset(_e: ft.ControlEvent | None = None) -> None:
             self._type_value = "all"
             self._category_value = "all"
             self._date_from_value = ""
             self._date_to_value = ""
             self._group_by_value = StatsPeriod.DAY.value
-            self._page.pop_dialog()
+            close()
             self._filter_summary.value = self._filter_summary_text()
             safe_update(self._filter_summary)
             run_async(self._page, self.reload)
 
-        self._page.show_dialog(
-            ft.AlertDialog(
-                modal=True,
-                title=ft.Text(tr("action.filters", lang)),
-                content=ft.Container(
-                    width=360,
-                    content=ft.Column(
-                        tight=True,
-                        spacing=12,
-                        scroll=ft.ScrollMode.AUTO,
-                        controls=[
-                            type_dd,
-                            category_dd,
-                            group_dd,
-                            date_from,
-                            date_to,
-                        ],
-                    ),
+        close = open_fullscreen_form(
+            self._page,
+            title=tr("action.filters", lang),
+            lang=lang,
+            overlay_key="transaction_filters",
+            save_label=tr("action.apply", lang),
+            body=[
+                type_dd,
+                category_dd,
+                group_dd,
+                date_from,
+                date_to,
+                ft.OutlinedButton(
+                    tr("action.reset", lang),
+                    icon=ft.Icons.RESTART_ALT,
+                    on_click=_reset,
                 ),
-                actions=[
-                    ft.TextButton(tr("action.reset", lang), on_click=_reset),
-                    ft.TextButton(
-                        tr("action.cancel", lang),
-                        on_click=lambda _e: self._page.pop_dialog(),
-                    ),
-                    ft.FilledButton(
-                        tr("action.apply", lang),
-                        icon=ft.Icons.CHECK,
-                        on_click=_apply,
-                    ),
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
+            ],
+            on_save=_apply,
         )
 
-    async def reload(self) -> None:
-        """Reload filtered transactions."""
-        self._token = self._state.transactions_token
-        lang = self._state.language
-        self._filter_summary.value = self._filter_summary_text()
-        self._list.controls = [loading_indicator()]
-        safe_update(self._list)
-        safe_update(self._filter_summary)
+    async def _debounced_search(self) -> None:
+        """Wait briefly so typing does not reload on every keystroke."""
+        self._search_gen += 1
+        gen = self._search_gen
+        await asyncio.sleep(0.35)
+        if gen != self._search_gen:
+            return
+        await self.reload()
 
+    async def _ensure_meta(self) -> None:
+        """Load accounts / goals / categories only when data tokens change."""
+        token = self._state.transactions_token
+        if self._meta_token == token and self._accounts:
+            return
         c = self._state.container
-        tx_type = None
-        if self._type_value not in (None, "all"):
-            tx_type = TransactionType(self._type_value)
-        category = None
-        if self._category_value not in (None, "all"):
-            category = self._category_value
+        self._accounts = await c.list_accounts.execute(active_only=True)
+        self._goals = await c.list_goals.execute(include_completed=False)
+        if c.list_categories is not None:
+            cats = await c.list_categories.execute(active_only=False)
+            self._category_map = {cat.name: cat for cat in cats}
+        self._meta_token = token
 
-        try:
-            date_from = _parse_date(self._date_from_value)
-            date_to = _parse_date(self._date_to_value, end_of_day=True)
-        except ValueError:
-            snack(self._page, tr("invalid_date", lang), error=True)
-            return
-
-        try:
-            self._accounts = await c.list_accounts.execute(active_only=True)
-            self._goals = await c.list_goals.execute(include_completed=False)
-            if c.list_categories is not None:
-                cats = await c.list_categories.execute(active_only=False)
-                self._category_map = {cat.name: cat for cat in cats}
-            items = await c.list_transactions.execute(
-                category=category,
-                transaction_type=tx_type,
-                date_from=date_from,
-                date_to=date_to,
-            )
-        except Exception as exc:  # noqa: BLE001
-            snack(self._page, str(exc), error=True)
-            self._list.controls = [EmptyState(tr("error.generic", lang))]
-            safe_update(self._list)
-            return
-
-        query = (self._search.value or "").strip().lower()
-        if query:
-            items = [
-                tx
-                for tx in items
-                if query in tx.category.lower()
-                or query in (tx.comment or "").lower()
-                or any(query in tag.lower() for tag in tx.tags)
-            ]
-
+    def _render_list(self, items: list[Transaction], *, lang: str) -> None:
         if not items:
             self._list.controls = [
                 EmptyState(
@@ -366,7 +345,7 @@ class TransactionsPage(ft.Column):
 
         group_mode = self._group_by_value or StatsPeriod.DAY.value
         grouped: dict[str, list[Transaction]] = defaultdict(list)
-        for tx in sorted(items, key=lambda t: t.date, reverse=True):
+        for tx in items:
             grouped[_period_key(tx.date, group_mode)].append(tx)
 
         controls: list[ft.Control] = []
@@ -391,8 +370,133 @@ class TransactionsPage(ft.Column):
                         on_delete=self._confirm_delete,
                     )
                 )
+        if self._has_more:
+            controls.append(
+                ft.Container(
+                    padding=ft.Padding.symmetric(vertical=8),
+                    content=ft.OutlinedButton(
+                        tr(
+                            "action.load_more",
+                            lang,
+                            default="Показать ещё",
+                        ),
+                        icon=ft.Icons.EXPAND_MORE,
+                        on_click=lambda _e: run_async(self._page, self._load_more),
+                    ),
+                    alignment=ft.Alignment.CENTER,
+                )
+            )
         self._list.controls = controls
         safe_update(self._list)
+
+    async def _load_more(self) -> None:
+        """Append the next page of transactions."""
+        if not self._has_more:
+            return
+        lang = self._state.language
+        query = (self._search.value or "").strip().lower()
+        if query:
+            start = len(self._shown)
+            chunk = self._search_cache[start : start + _PAGE_SIZE]
+            self._shown.extend(chunk)
+            self._has_more = start + _PAGE_SIZE < len(self._search_cache)
+            self._render_list(self._shown, lang=lang)
+            return
+
+        c = self._state.container
+        tx_type = None
+        if self._type_value not in (None, "all"):
+            tx_type = TransactionType(self._type_value)
+        category = None
+        if self._category_value not in (None, "all"):
+            category = self._category_value
+        try:
+            date_from = _parse_date(self._date_from_value)
+            date_to = _parse_date(self._date_to_value, end_of_day=True)
+        except ValueError:
+            return
+        try:
+            rows = await c.list_transactions.execute(
+                category=category,
+                transaction_type=tx_type,
+                date_from=date_from,
+                date_to=date_to,
+                limit=_PAGE_SIZE + 1,
+                offset=self._offset,
+            )
+        except Exception as exc:  # noqa: BLE001
+            snack(self._page, str(exc), error=True)
+            return
+        self._has_more = len(rows) > _PAGE_SIZE
+        chunk = rows[:_PAGE_SIZE]
+        self._shown.extend(chunk)
+        self._offset += len(chunk)
+        self._render_list(self._shown, lang=lang)
+
+    async def reload(self) -> None:
+        """Reload the first page of filtered transactions."""
+        self._token = self._state.transactions_token
+        lang = self._state.language
+        self._filter_summary.value = self._filter_summary_text()
+        self._list.controls = [loading_indicator()]
+        safe_update(self._list)
+        safe_update(self._filter_summary)
+
+        c = self._state.container
+        tx_type = None
+        if self._type_value not in (None, "all"):
+            tx_type = TransactionType(self._type_value)
+        category = None
+        if self._category_value not in (None, "all"):
+            category = self._category_value
+
+        try:
+            date_from = _parse_date(self._date_from_value)
+            date_to = _parse_date(self._date_to_value, end_of_day=True)
+        except ValueError:
+            snack(self._page, tr("invalid_date", lang), error=True)
+            self._list.controls = [EmptyState(tr("invalid_date", lang))]
+            safe_update(self._list)
+            return
+
+        try:
+            await self._ensure_meta()
+            query = (self._search.value or "").strip().lower()
+            if query:
+                scanned = await c.list_transactions.execute(
+                    category=category,
+                    transaction_type=tx_type,
+                    date_from=date_from,
+                    date_to=date_to,
+                    limit=_SEARCH_SCAN_LIMIT,
+                    offset=0,
+                )
+                self._search_cache = [
+                    tx for tx in scanned if _matches_query(tx, query)
+                ]
+                self._shown = self._search_cache[:_PAGE_SIZE]
+                self._offset = len(self._shown)
+                self._has_more = len(self._search_cache) > _PAGE_SIZE
+            else:
+                rows = await c.list_transactions.execute(
+                    category=category,
+                    transaction_type=tx_type,
+                    date_from=date_from,
+                    date_to=date_to,
+                    limit=_PAGE_SIZE + 1,
+                    offset=0,
+                )
+                self._search_cache = []
+                self._has_more = len(rows) > _PAGE_SIZE
+                self._shown = rows[:_PAGE_SIZE]
+                self._offset = len(self._shown)
+        except Exception as exc:  # noqa: BLE001
+            snack(self._page, str(exc), error=True)
+            self._list.controls = [EmptyState(tr("error.generic", lang))]
+            safe_update(self._list)
+            return
+
+        self._render_list(self._shown, lang=lang)
 
     def _confirm_delete(self, tx: Transaction) -> None:
         lang = self._state.language
@@ -405,7 +509,10 @@ class TransactionsPage(ft.Column):
         confirm_dialog(
             self._page,
             title=tr("action.confirm_delete", lang),
-            message=f"{tx.category} · {tx.amount}",
+            message=(
+                f"{localize_category_name(tx.category, lang)} · "
+                f"{format_money(tx.amount, tx.currency)}"
+            ),
             confirm_text=tr("action.delete", lang),
             cancel_text=tr("action.cancel", lang),
             on_confirm=_do,
@@ -464,6 +571,8 @@ class TransactionsPage(ft.Column):
             initial_name=tx.category if tx else None,
         )
         await category_picker.reload()
+        if category_picker.is_empty:
+            category_picker.prompt_if_empty()
         type_dd.on_select = lambda _e: category_picker.set_tx_type(
             type_dd.value or TransactionType.EXPENSE.value
         )
@@ -587,7 +696,11 @@ class TransactionsPage(ft.Column):
         )
 
     async def _maybe_notify_goal(self, goal_id: Optional[str]) -> None:
-        if not goal_id or not self._state.settings.goal_milestones:
+        if (
+            not goal_id
+            or not self._state.settings.notifications_enabled
+            or not self._state.settings.goal_milestones
+        ):
             return
         goal = await self._state.container.goal_repository.get_by_id(goal_id)
         if goal and goal.is_completed:
@@ -598,4 +711,6 @@ class TransactionsPage(ft.Column):
                 notifier.push(
                     title=tr("notify.goal_reached", self._state.language),
                     body=goal.name,
+                    kind=NotificationKind.GOAL_MILESTONE,
+                    related_id=goal.id,
                 )

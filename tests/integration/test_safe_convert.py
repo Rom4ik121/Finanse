@@ -21,6 +21,7 @@ def test_tr_all_nav_keys() -> None:
         "nav.subscriptions",
         "nav.settings",
         "nav.currencies",
+        "nav.analytics",
     ):
         for lang in ("ru", "en", "uz"):
             assert tr(key, lang)
@@ -46,6 +47,11 @@ def test_safe_convert_same_and_missing(container) -> None:
         )
         converted = await safe_convert(container, Decimal("2"), "USD", "RUB")
         assert converted == Decimal("200.00")
+
+        unit = await safe_convert(
+            container, Decimal("1"), "RUB", "USD", quantize=False
+        )
+        assert unit == Decimal("0.01")
 
         none_uc = await safe_convert(
             SimpleNamespace(convert_currency=None),

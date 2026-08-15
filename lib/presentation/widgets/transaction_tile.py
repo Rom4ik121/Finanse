@@ -10,6 +10,7 @@ from lib.domain.entities.category import Category
 from lib.domain.entities.transaction import Transaction, TransactionType
 from lib.presentation.styles import muted_text
 from lib.presentation.utils import category_icon, format_date, format_money
+from lib.infrastructure.services.localization import localize_category_name
 
 
 class TransactionTile(ft.Container):
@@ -101,7 +102,7 @@ class TransactionTile(ft.Container):
                     expand=True,
                     controls=[
                         ft.Text(
-                            transaction.category,
+                            localize_category_name(transaction.category, language),
                             weight=ft.FontWeight.W_600,
                             size=13,
                             overflow=ft.TextOverflow.ELLIPSIS,

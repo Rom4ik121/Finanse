@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 import flet as ft
 
-from lib.core.config import ACCOUNT_COLORS, ACCOUNT_ICONS
+from lib.core.config import ACCOUNT_COLORS
 from lib.domain.entities.account import Account
 from lib.domain.entities.currency_codes import normalize_currency_code
 from lib.presentation.account_icons import (
@@ -15,18 +15,20 @@ from lib.presentation.account_icons import (
     account_icon_groups,
     is_valid_account_icon,
 )
-from lib.presentation.currency_options import currency_dropdown_options
-from lib.presentation.styles import page_header
+from lib.presentation.styles import ICON_CATALOG_GLYPH, page_header
 from lib.presentation.utils import (
+    load_rate_book,
     run_async,
-    safe_convert,
     safe_update,
     snack,
     tr,
 )
 from lib.presentation.widgets.account_card import AccountCard
+from lib.presentation.widgets.appearance_picker import open_color_picker, open_icon_picker
 from lib.presentation.widgets.confirm_dialog import confirm_dialog
+from lib.presentation.widgets.currency_ticker_picker import CurrencyTickerPicker
 from lib.presentation.widgets.empty_state import EmptyState
+from lib.presentation.widgets.fullscreen_form import dismiss_fullscreen
 from lib.presentation.widgets.loading import loading_indicator
 if TYPE_CHECKING:
     from lib.presentation.state.app_state import AppState
@@ -100,10 +102,10 @@ class AccountsPage(ft.Column):
             return
 
         base = self._state.base_currency
+        book = await load_rate_book(self._state.container)
         cards: list[ft.Control] = []
         for account in accounts:
-            converted = await safe_convert(
-                self._state.container,
+            converted = book.convert(
                 account.balance,
                 account.currency,
                 base,
@@ -140,26 +142,25 @@ class AccountsPage(ft.Column):
 
     def _open_editor(self, account: Optional[Account] = None) -> None:
         lang = self._state.language
-        initial_icon = account.icon if account else ACCOUNT_ICONS[0]
+        initial_icon = account.icon if account else "wallet"
         if not is_valid_account_icon(initial_icon):
-            initial_icon = ACCOUNT_ICONS[0]
+            initial_icon = "wallet"
         selected_icon = {"value": initial_icon}
         selected_color = {"value": account.color if account else ACCOUNT_COLORS[0]}
-        icons_open = {"value": False}
-        colors_open = {"value": False}
 
         name_tf = ft.TextField(
             label=tr("field.name", lang),
             value=account.name if account else "",
         )
-        currency_dd = ft.Dropdown(
+        currency_picker = CurrencyTickerPicker(
+            self._page,
+            lang=lang,
             label=tr("field.currency", lang),
             value=normalize_currency_code(
                 account.currency if account else self._state.base_currency
             ),
-            options=currency_dropdown_options(lang=lang, include_crypto=True),
+            include_crypto=True,
             expand=True,
-            dense=True,
         )
         balance_tf = ft.TextField(
             label=tr("account.balance", lang),
@@ -171,11 +172,14 @@ class AccountsPage(ft.Column):
         icon_preview = ft.Container(
             width=48,
             height=48,
-            border_radius=14,
+            border_radius=24,
             alignment=ft.Alignment.CENTER,
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
-            border=ft.Border.all(2, ft.Colors.OUTLINE_VARIANT),
-            content=account_icon_control(selected_icon["value"], size=26),
+            bgcolor=selected_color["value"],
+            content=account_icon_control(
+                selected_icon["value"],
+                size=24,
+                color=ICON_CATALOG_GLYPH,
+            ),
         )
         color_preview = ft.Container(
             width=48,
@@ -184,191 +188,66 @@ class AccountsPage(ft.Column):
             bgcolor=selected_color["value"],
             border=ft.Border.all(2, ft.Colors.OUTLINE_VARIANT),
         )
-        icon_toggle_label = ft.Text(
-            tr("picker.choose_icon", lang),
-            size=13,
-            weight=ft.FontWeight.W_600,
-            expand=True,
-        )
         color_toggle_label = ft.Text(
             tr("picker.choose_color", lang),
             size=13,
             weight=ft.FontWeight.W_600,
             expand=True,
         )
-        icon_chevron = ft.Icon(ft.Icons.EXPAND_MORE, size=20)
-        color_chevron = ft.Icon(ft.Icons.EXPAND_MORE, size=20)
-
-        icon_groups_col = ft.Column(spacing=12, tight=True)
-        color_grid = ft.Row(wrap=True, spacing=6, run_spacing=6)
-
-        icon_panel = ft.Container(
-            visible=False,
-            padding=ft.Padding.only(top=8),
-            content=ft.Container(
-                height=280,
-                border_radius=14,
-                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-                padding=10,
-                content=ft.Column(
-                    scroll=ft.ScrollMode.AUTO,
-                    spacing=0,
-                    controls=[icon_groups_col],
-                ),
-            ),
+        icon_toggle_label = ft.Text(
+            tr("picker.choose_icon", lang),
+            size=13,
+            weight=ft.FontWeight.W_600,
+            expand=True,
         )
-        color_panel = ft.Container(
-            visible=False,
-            padding=ft.Padding.only(top=8),
-            content=ft.Container(
-                height=160,
-                border_radius=14,
-                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-                padding=10,
-                content=ft.Column(
-                    scroll=ft.ScrollMode.AUTO,
-                    spacing=0,
-                    controls=[color_grid],
-                ),
-            ),
-        )
+        color_chevron = ft.Icon(ft.Icons.CHEVRON_RIGHT, size=22)
+        icon_chevron = ft.Icon(ft.Icons.CHEVRON_RIGHT, size=22)
 
         def _refresh_previews() -> None:
             icon_preview.content = account_icon_control(
                 selected_icon["value"],
-                size=26,
-                color=selected_color["value"],
+                size=24,
+                color=ICON_CATALOG_GLYPH,
             )
-            icon_preview.border = ft.Border.all(2, selected_color["value"])
+            icon_preview.bgcolor = selected_color["value"]
             color_preview.bgcolor = selected_color["value"]
-            icon_chevron.icon = (
-                ft.Icons.EXPAND_LESS if icons_open["value"] else ft.Icons.EXPAND_MORE
-            )
-            color_chevron.icon = (
-                ft.Icons.EXPAND_LESS if colors_open["value"] else ft.Icons.EXPAND_MORE
-            )
-            icon_toggle_label.value = (
-                tr("picker.close", lang)
-                if icons_open["value"]
-                else tr("picker.choose_icon", lang)
-            )
-            color_toggle_label.value = (
-                tr("picker.close", lang)
-                if colors_open["value"]
-                else tr("picker.choose_color", lang)
-            )
             try:
                 icon_preview.update()
                 color_preview.update()
-                icon_chevron.update()
-                color_chevron.update()
-                icon_toggle_label.update()
-                color_toggle_label.update()
             except Exception:  # noqa: BLE001
                 pass
-
-        def _icon_tile(key: str) -> ft.Container:
-            active = key == selected_icon["value"]
-            return ft.Container(
-                width=40,
-                height=40,
-                border_radius=12,
-                bgcolor=(
-                    ft.Colors.PRIMARY_CONTAINER if active else ft.Colors.SURFACE
-                ),
-                border=ft.Border.all(
-                    2,
-                    selected_color["value"] if active else ft.Colors.OUTLINE_VARIANT,
-                ),
-                alignment=ft.Alignment.CENTER,
-                ink=True,
-                on_click=lambda _e, k=key: _select_icon(k),
-                content=account_icon_control(
-                    key,
-                    size=20,
-                    color=selected_color["value"],
-                ),
-            )
-
-        def _rebuild_grids() -> None:
-            icon_groups_col.controls = []
-            for group_key, keys in account_icon_groups():
-                icon_groups_col.controls.append(
-                    ft.Text(
-                        tr(group_key, lang),
-                        size=12,
-                        weight=ft.FontWeight.W_600,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                    )
-                )
-                icon_groups_col.controls.append(
-                    ft.Row(
-                        wrap=True,
-                        spacing=6,
-                        run_spacing=6,
-                        controls=[_icon_tile(k) for k in keys],
-                    )
-                )
-            color_grid.controls = []
-            for color in ACCOUNT_COLORS:
-                active = color == selected_color["value"]
-                color_grid.controls.append(
-                    ft.Container(
-                        width=32,
-                        height=32,
-                        border_radius=16,
-                        bgcolor=color,
-                        border=ft.Border.all(
-                            3,
-                            ft.Colors.ON_SURFACE if active else ft.Colors.TRANSPARENT,
-                        ),
-                        ink=True,
-                        on_click=lambda _e, c=color: _select_color(c),
-                    )
-                )
-            try:
-                icon_groups_col.update()
-                color_grid.update()
-            except Exception:  # noqa: BLE001
-                pass
-
-        def _set_panel(kind: str, open_: bool) -> None:
-            if kind == "icon":
-                icons_open["value"] = open_
-                if open_:
-                    colors_open["value"] = False
-            else:
-                colors_open["value"] = open_
-                if open_:
-                    icons_open["value"] = False
-            icon_panel.visible = icons_open["value"]
-            color_panel.visible = colors_open["value"]
-            _refresh_previews()
-            try:
-                icon_panel.update()
-                color_panel.update()
-            except Exception:  # noqa: BLE001
-                pass
-
-        def _toggle_icons(_e: ft.ControlEvent | None = None) -> None:
-            _set_panel("icon", not icons_open["value"])
-
-        def _toggle_colors(_e: ft.ControlEvent | None = None) -> None:
-            _set_panel("color", not colors_open["value"])
 
         def _select_icon(key: str) -> None:
             selected_icon["value"] = key
-            _rebuild_grids()
-            _set_panel("icon", False)
+            _refresh_previews()
 
         def _select_color(color: str) -> None:
             selected_color["value"] = color
-            _rebuild_grids()
-            _set_panel("color", False)
+            _refresh_previews()
 
-        _rebuild_grids()
+        def _open_icons(_e: ft.ControlEvent | None = None) -> None:
+            open_icon_picker(
+                self._page,
+                lang=lang,
+                groups=account_icon_groups(),
+                selected=selected_icon["value"],
+                on_select=_select_icon,
+                render_icon=lambda key: account_icon_control(
+                    key, size=22, color=ICON_CATALOG_GLYPH
+                ),
+                overlay_key="account_icon_picker",
+            )
+
+        def _open_colors(_e: ft.ControlEvent | None = None) -> None:
+            open_color_picker(
+                self._page,
+                lang=lang,
+                colors=ACCOUNT_COLORS,
+                selected=selected_color["value"],
+                on_select=_select_color,
+                overlay_key="account_color_picker",
+            )
+
         _refresh_previews()
 
         icon_toggle = ft.Container(
@@ -377,7 +256,7 @@ class AccountsPage(ft.Column):
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             ink=True,
-            on_click=_toggle_icons,
+            on_click=_open_icons,
             content=ft.Row(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -406,7 +285,7 @@ class AccountsPage(ft.Column):
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             ink=True,
-            on_click=_toggle_colors,
+            on_click=_open_colors,
             content=ft.Row(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -442,7 +321,7 @@ class AccountsPage(ft.Column):
             entity = Account(
                 id=account.id if account else Account(name="tmp").id,
                 name=name_tf.value.strip(),
-                currency=normalize_currency_code(currency_dd.value or "RUB"),
+                currency=normalize_currency_code(currency_picker.value or "RUB"),
                 balance=account.balance if account else initial,
                 initial_balance=account.initial_balance if account else initial,
                 icon=selected_icon["value"],
@@ -500,12 +379,10 @@ class AccountsPage(ft.Column):
                                 scroll=ft.ScrollMode.AUTO,
                                 controls=[
                                     name_tf,
-                                    currency_dd,
+                                    currency_picker,
                                     balance_tf,
                                     icon_toggle,
-                                    icon_panel,
                                     color_toggle,
-                                    color_panel,
                                     ft.Container(height=24),
                                 ],
                             ),
@@ -516,6 +393,9 @@ class AccountsPage(ft.Column):
         )
 
         def _close_editor(_e: ft.ControlEvent | None = None) -> None:
+            dismiss_fullscreen(self._page, key="account_icon_picker")
+            dismiss_fullscreen(self._page, key="account_color_picker")
+            currency_picker.close_overlay()
             try:
                 if overlay in self._page.overlay:
                     self._page.overlay.remove(overlay)

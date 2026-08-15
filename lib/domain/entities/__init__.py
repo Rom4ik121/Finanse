@@ -3,7 +3,7 @@
 from lib.domain.entities.account import Account
 from lib.domain.entities.currency import Currency, ExchangeRate
 from lib.domain.entities.debt import Debt, DebtDirection, DebtStatus
-from lib.domain.entities.goal import Goal
+from lib.domain.entities.goal import Goal, GoalStatus
 from lib.domain.entities.money import quantize_money, quantize_rate
 from lib.domain.entities.settings import AppSettings
 from lib.domain.entities.subscription import Periodicity, Subscription
@@ -18,6 +18,7 @@ __all__ = [
     "DebtStatus",
     "ExchangeRate",
     "Goal",
+    "GoalStatus",
     "Periodicity",
     "Subscription",
     "Transaction",

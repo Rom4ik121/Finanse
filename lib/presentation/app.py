@@ -10,6 +10,7 @@ import flet as ft
 
 from lib.infrastructure.services.encryption_service import EncryptionService
 from lib.presentation.pages.accounts import AccountsPage
+from lib.presentation.pages.analytics import AnalyticsPage
 from lib.presentation.pages.currencies import CurrenciesPage
 from lib.presentation.pages.dashboard import DashboardPage
 from lib.presentation.pages.debts import DebtsPage
@@ -81,6 +82,7 @@ class FinanseApp:
         self._rendered_unlocked: Optional[bool] = None
         self._rendered_rebuild_token: int = -1
         self._primary_cache: dict[int, ft.Control] = {}
+        self._secondary_cache: dict[str, ft.Control] = {}
         self._pin_hash: Optional[str] = None
         self._pin_salt: Optional[str] = None
 
@@ -182,6 +184,7 @@ class FinanseApp:
     def _on_state_changed(self, _state: AppState) -> None:
         if self._rendered_rebuild_token != self.state.view_rebuild_token:
             self._primary_cache.clear()
+            self._secondary_cache.clear()
             self._rendered_rebuild_token = self.state.view_rebuild_token
             self._render(force=True)
             self._flush_notifications()
@@ -197,6 +200,7 @@ class FinanseApp:
             # switch language too (plain _render early-returns on same tab).
             self._build_navigation_bar()
             self._primary_cache.clear()
+            self._secondary_cache.clear()
             self._render(force=True)
             self._flush_notifications()
             return
@@ -224,15 +228,23 @@ class FinanseApp:
         return view
 
     def _secondary_page(self, route: str) -> ft.Control:
-        if route == "goals":
-            return GoalsPage(self.page, self.state)
-        if route == "debts":
-            return DebtsPage(self.page, self.state)
-        if route == "subscriptions":
-            return SubscriptionsPage(self.page, self.state)
-        if route == "currencies":
-            return CurrenciesPage(self.page, self.state)
-        return self._primary_page(self.state.selected_tab)
+        cached = self._secondary_cache.get(route)
+        if cached is not None:
+            return cached
+        if route == "analytics":
+            view: ft.Control = AnalyticsPage(self.page, self.state)
+        elif route == "goals":
+            view = GoalsPage(self.page, self.state)
+        elif route == "debts":
+            view = DebtsPage(self.page, self.state)
+        elif route == "subscriptions":
+            view = SubscriptionsPage(self.page, self.state)
+        elif route == "currencies":
+            view = CurrenciesPage(self.page, self.state)
+        else:
+            return self._primary_page(self.state.selected_tab)
+        self._secondary_cache[route] = view
+        return view
 
     async def _unlock(self) -> None:
         self.state.set_unlocked(True)

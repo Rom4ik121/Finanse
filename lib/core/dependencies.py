@@ -65,6 +65,10 @@ class Container:
     delete_goal: Any = None
     list_goals: Any = None
     contribute_to_goal: Any = None
+    get_goal_projection: Any = None
+    archive_goal: Any = None
+    duplicate_goal: Any = None
+    delete_goal_contribution: Any = None
 
     # Use cases — debts
     create_debt: Any = None
@@ -73,6 +77,10 @@ class Container:
     list_debts: Any = None
     repay_debt: Any = None
     calculate_debt_interest: Any = None
+    get_debt_projection: Any = None
+    archive_debt: Any = None
+    delete_debt_payment: Any = None
+    mark_overdue_debts: Any = None
 
     # Use cases — subscriptions
     create_subscription: Any = None
@@ -80,6 +88,11 @@ class Container:
     delete_subscription: Any = None
     list_subscriptions: Any = None
     process_due_subscriptions: Any = None
+    pause_subscription: Any = None
+    resume_subscription: Any = None
+    charge_subscription_now: Any = None
+    delete_subscription_charge: Any = None
+    get_subscription_analytics: Any = None
 
     # Use cases — currencies / settings / export / categories
     update_exchange_rates: Any = None
@@ -296,18 +309,26 @@ def build_container(
         UpdateExchangeRatesUseCase,
     )
     from lib.domain.use_cases.debts import (
+        ArchiveDebtUseCase,
         CalculateDebtInterestUseCase,
         CreateDebtUseCase,
+        DeleteDebtPaymentUseCase,
         DeleteDebtUseCase,
+        GetDebtProjectionUseCase,
         ListDebtsUseCase,
+        MarkOverdueDebtsUseCase,
         RepayDebtUseCase,
         UpdateDebtUseCase,
     )
     from lib.domain.use_cases.export_data import ExportDataUseCase
     from lib.domain.use_cases.goals import (
+        ArchiveGoalUseCase,
         ContributeToGoalUseCase,
         CreateGoalUseCase,
+        DeleteGoalContributionUseCase,
         DeleteGoalUseCase,
+        DuplicateGoalUseCase,
+        GetGoalProjectionUseCase,
         ListGoalsUseCase,
         UpdateGoalUseCase,
     )
@@ -320,10 +341,15 @@ def build_container(
     )
     from lib.domain.use_cases.settings import GetSettingsUseCase, UpdateSettingsUseCase
     from lib.domain.use_cases.subscriptions import (
+        ChargeSubscriptionNowUseCase,
         CreateSubscriptionUseCase,
+        DeleteSubscriptionChargeUseCase,
         DeleteSubscriptionUseCase,
+        GetSubscriptionAnalyticsUseCase,
         ListSubscriptionsUseCase,
+        PauseSubscriptionUseCase,
         ProcessDueSubscriptionsUseCase,
+        ResumeSubscriptionUseCase,
         UpdateSubscriptionUseCase,
     )
     from lib.domain.use_cases.transactions import (
@@ -395,12 +421,28 @@ def build_container(
     _wire("update_goal", UpdateGoalUseCase, "goal_repository")
     _wire("delete_goal", DeleteGoalUseCase, "goal_repository")
     _wire("list_goals", ListGoalsUseCase, "goal_repository")
+    _wire("archive_goal", ArchiveGoalUseCase, "goal_repository")
+    _wire("duplicate_goal", DuplicateGoalUseCase, "goal_repository")
+    _wire(
+        "get_goal_projection",
+        GetGoalProjectionUseCase,
+        "goal_repository",
+        "transaction_repository",
+    )
+    _wire(
+        "delete_goal_contribution",
+        DeleteGoalContributionUseCase,
+        "transaction_repository",
+        "delete_transaction",
+    )
     _wire(
         "contribute_to_goal",
         ContributeToGoalUseCase,
         "goal_repository",
         "account_repository",
         "add_transaction",
+        "currency_repository",
+        "transaction_repository",
     )
 
     _wire(
@@ -413,12 +455,27 @@ def build_container(
     _wire("update_debt", UpdateDebtUseCase, "debt_repository")
     _wire("delete_debt", DeleteDebtUseCase, "debt_repository")
     _wire("list_debts", ListDebtsUseCase, "debt_repository")
+    _wire("archive_debt", ArchiveDebtUseCase, "debt_repository")
+    _wire("mark_overdue_debts", MarkOverdueDebtsUseCase, "debt_repository")
+    _wire(
+        "get_debt_projection",
+        GetDebtProjectionUseCase,
+        "debt_repository",
+        "transaction_repository",
+    )
+    _wire(
+        "delete_debt_payment",
+        DeleteDebtPaymentUseCase,
+        "transaction_repository",
+        "delete_transaction",
+    )
     _wire(
         "repay_debt",
         RepayDebtUseCase,
         "debt_repository",
         "account_repository",
         "add_transaction",
+        "currency_repository",
     )
     _wire(
         "calculate_debt_interest",
@@ -430,12 +487,37 @@ def build_container(
     _wire("update_subscription", UpdateSubscriptionUseCase, "subscription_repository")
     _wire("delete_subscription", DeleteSubscriptionUseCase, "subscription_repository")
     _wire("list_subscriptions", ListSubscriptionsUseCase, "subscription_repository")
+    _wire("pause_subscription", PauseSubscriptionUseCase, "subscription_repository")
+    _wire("resume_subscription", ResumeSubscriptionUseCase, "subscription_repository")
     _wire(
         "process_due_subscriptions",
         ProcessDueSubscriptionsUseCase,
         "subscription_repository",
         "transaction_repository",
         "account_repository",
+        "settings_repository",
+    )
+    _wire(
+        "charge_subscription_now",
+        ChargeSubscriptionNowUseCase,
+        "subscription_repository",
+        "transaction_repository",
+        "account_repository",
+        "settings_repository",
+    )
+    _wire(
+        "delete_subscription_charge",
+        DeleteSubscriptionChargeUseCase,
+        "transaction_repository",
+        "subscription_repository",
+        "delete_transaction",
+    )
+    _wire(
+        "get_subscription_analytics",
+        GetSubscriptionAnalyticsUseCase,
+        "subscription_repository",
+        "transaction_repository",
+        "currency_repository",
     )
 
     # Currencies: provider is optional for UpdateExchangeRatesUseCase

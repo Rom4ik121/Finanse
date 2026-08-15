@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $IconPath = Join-Path $ProjectRoot "assets\icon.ico"
-$Launcher = Join-Path $ProjectRoot "scripts\launch_finwise.ps1"
+$Launcher = Join-Path $ProjectRoot "scripts\launch_finwise.bat"
 $Desktop = [Environment]::GetFolderPath("Desktop")
 $ShortcutPath = Join-Path $Desktop "FinWise.lnk"
 
@@ -17,8 +17,7 @@ if (-not (Test-Path $Launcher)) {
 
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($ShortcutPath)
-$shortcut.TargetPath = "powershell.exe"
-$shortcut.Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Launcher`""
+$shortcut.TargetPath = $Launcher
 $shortcut.WorkingDirectory = $ProjectRoot
 $shortcut.IconLocation = "$IconPath,0"
 $shortcut.Description = "FinWise personal finance tracker"

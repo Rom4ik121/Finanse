@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from lib.domain.entities.debt import Debt, DebtStatus
 from lib.domain.entities.subscription import Subscription
+from lib.infrastructure.services.localization import t
 
 logger = logging.getLogger("finanse.infrastructure.services.notification")
 
@@ -21,8 +22,13 @@ class NotificationKind(str, Enum):
     INFO = "info"
     WARNING = "warning"
     DEBT_REMINDER = "debt_reminder"
+    DEBT_OVERDUE = "debt_overdue"
+    DEBT_IDLE = "debt_idle"
     SUBSCRIPTION_REMINDER = "subscription_reminder"
+    SUBSCRIPTION_SKIPPED = "subscription_skipped"
+    SUBSCRIPTION_EXPIRED = "subscription_expired"
     GOAL_MILESTONE = "goal_milestone"
+    GOAL_OFF_TRACK = "goal_off_track"
 
 
 @dataclass(slots=True)
@@ -66,6 +72,17 @@ class NotificationService:
         )
         self._messages.append(message)
         logger.debug("Notification queued: %s (%s)", title, kind.value)
+        try:
+            from lib.infrastructure.services.push_notifier import dispatch_push
+
+            dispatch_push(
+                title,
+                body,
+                kind=kind.value,
+                related_id=related_id,
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("OS push dispatch failed")
         return message
 
     def list_all(self, *, unread_only: bool = False) -> list[NotificationMessage]:
@@ -102,12 +119,22 @@ class NotificationService:
         """Drop the entire queue."""
         self._messages.clear()
 
+    def clear_kinds(self, *kinds: NotificationKind) -> int:
+        """Remove notifications matching any of ``kinds``. Returns count removed."""
+        if not kinds:
+            return 0
+        wanted = set(kinds)
+        before = len(self._messages)
+        self._messages = [m for m in self._messages if m.kind not in wanted]
+        return before - len(self._messages)
+
     def schedule_debt_reminders(
         self,
         debts: list[Debt],
         *,
         lead_days: Optional[int] = None,
         now: Optional[datetime] = None,
+        language: str = "ru",
     ) -> list[NotificationMessage]:
         """Create pending reminders for active debts due within ``lead_days``."""
         moment = now or datetime.now(timezone.utc)
@@ -120,18 +147,20 @@ class NotificationService:
             due = debt.due_date
             if due.tzinfo is None:
                 due = due.replace(tzinfo=timezone.utc)
-            if due < moment or due > moment + lead:
+            # Include overdue and upcoming (within lead window).
+            if due > moment + lead:
                 continue
             if self._has_related(debt.id, NotificationKind.DEBT_REMINDER):
                 continue
+            due_label = t("debt.due_by", language).format(date=due.date().isoformat())
             message = self.push(
-                title="Debt due soon",
+                title=t("notify.debt_due", language),
                 body=(
-                    f"{debt.counterparty}: {debt.remaining_amount} {debt.currency} "
-                    f"due {due.date().isoformat()}"
+                    f"{debt.counterparty}: {debt.remaining_amount} {debt.currency} · "
+                    f"{due_label}"
                 ),
                 kind=NotificationKind.DEBT_REMINDER,
-                due_at=due,
+                due_at=None,
                 related_id=debt.id,
             )
             created.append(message)
@@ -145,30 +174,50 @@ class NotificationService:
         *,
         lead_days: Optional[int] = None,
         now: Optional[datetime] = None,
+        language: str = "ru",
+        account_names: Optional[dict[str, str]] = None,
+        account_balances: Optional[dict[str, object]] = None,
     ) -> list[NotificationMessage]:
         """Create pending reminders for active subscriptions billing soon."""
+        from lib.domain.entities.subscription import SubscriptionStatus
+
         moment = now or datetime.now(timezone.utc)
         lead = timedelta(days=lead_days if lead_days is not None else self._default_lead_days)
+        names = account_names or {}
+        balances = account_balances or {}
         created: list[NotificationMessage] = []
 
         for sub in subscriptions:
-            if not sub.is_active:
+            if not sub.is_active or sub.status != SubscriptionStatus.ACTIVE:
                 continue
             due = sub.next_billing_date
             if due.tzinfo is None:
                 due = due.replace(tzinfo=timezone.utc)
-            if due < moment or due > moment + lead:
+            # Include overdue and upcoming (within lead window).
+            if due > moment + lead:
                 continue
             if self._has_related(sub.id, NotificationKind.SUBSCRIPTION_REMINDER):
                 continue
+            days = max(0, (due.date() - moment.date()).days)
+            account_name = names.get(sub.account_id, sub.account_id)
+            body = t("notify.subscription_due_body", language).format(
+                name=sub.name,
+                amount=sub.amount,
+                currency=sub.currency,
+                account=account_name,
+                days=days,
+            )
+            balance = balances.get(sub.account_id)
+            try:
+                if balance is not None and balance < sub.amount:
+                    body = f"{body} {t('notify.subscription_insufficient', language)}"
+            except TypeError:
+                pass
             message = self.push(
-                title="Subscription billing soon",
-                body=(
-                    f"{sub.name}: {sub.amount} {sub.currency} "
-                    f"on {due.date().isoformat()}"
-                ),
+                title=t("notify.subscription_due", language),
+                body=body,
                 kind=NotificationKind.SUBSCRIPTION_REMINDER,
-                due_at=due,
+                due_at=None,
                 related_id=sub.id,
             )
             created.append(message)

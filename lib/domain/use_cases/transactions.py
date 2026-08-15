@@ -10,13 +10,16 @@ from typing import Optional, Sequence
 
 from pydantic import BaseModel, Field
 
-from lib.domain.entities.debt import DebtStatus
+from lib.domain.entities.debt import DebtStatus, resolve_debt_status
+from lib.domain.entities.goal import GoalStatus
 from lib.domain.entities.money import quantize_money
 from lib.domain.entities.transaction import Transaction, TransactionType
 from lib.domain.repositories.account_repository import AccountRepository
 from lib.domain.repositories.debt_repository import DebtRepository
 from lib.domain.repositories.goal_repository import GoalRepository
 from lib.domain.repositories.transaction_repository import TransactionRepository
+from lib.domain.use_cases.debts import debt_credit_amount
+from lib.domain.use_cases.goals import goal_credit_amount
 
 
 def _utc_now() -> datetime:
@@ -33,6 +36,43 @@ def _balance_delta(tx_type: TransactionType, amount: Decimal) -> Decimal:
 
 def _is_goal_contribution(transaction: Transaction) -> bool:
     return transaction.type == TransactionType.EXPENSE and bool(transaction.goal_id)
+
+
+def _mark_goal_progress(goal: object, current: Decimal) -> None:
+    """Sync ``current_amount`` / status / completed flag on a goal entity."""
+    from lib.domain.entities.goal import Goal
+
+    if not isinstance(goal, Goal):
+        return
+    goal.current_amount = quantize_money(current)
+    if goal.status == GoalStatus.ARCHIVED:
+        goal.is_completed = goal.current_amount >= goal.target_amount
+        return
+    if goal.current_amount >= goal.target_amount:
+        goal.status = GoalStatus.COMPLETED
+        goal.is_completed = True
+    else:
+        goal.status = GoalStatus.ACTIVE
+        goal.is_completed = False
+
+
+def _mark_debt_remaining(debt: object, remaining: Decimal) -> None:
+    """Sync remaining amount and status on a debt entity."""
+    from lib.domain.entities.debt import Debt
+
+    if not isinstance(debt, Debt):
+        return
+    remaining = quantize_money(max(Decimal("0"), remaining))
+    if remaining > debt.amount:
+        remaining = quantize_money(debt.amount)
+    debt.remaining_amount = remaining
+    if debt.status != DebtStatus.ARCHIVED:
+        debt.status = resolve_debt_status(
+            remaining_amount=remaining,
+            due_date=debt.due_date,
+            current=debt.status,
+        )
+    debt.updated_at = _utc_now()
 
 
 def _is_debt_payment(transaction: Transaction) -> bool:
@@ -87,9 +127,8 @@ class AddTransactionUseCase:
         goal = await self._goals.get_by_id(transaction.goal_id or "")
         if goal is None:
             return
-        goal.current_amount = quantize_money(goal.current_amount + transaction.amount)
-        if goal.current_amount >= goal.target_amount:
-            goal.is_completed = True
+        credit = goal_credit_amount(transaction)
+        _mark_goal_progress(goal, goal.current_amount + credit)
         await self._goals.update(goal)
 
     async def _apply_debt_payment(self, transaction: Transaction) -> None:
@@ -98,12 +137,8 @@ class AddTransactionUseCase:
         debt = await self._debts.get_by_id(transaction.debt_id or "")
         if debt is None:
             return
-        remaining = quantize_money(
-            max(Decimal("0"), debt.remaining_amount - transaction.amount)
-        )
-        debt.remaining_amount = remaining
-        debt.status = DebtStatus.PAID if remaining <= 0 else DebtStatus.ACTIVE
-        debt.updated_at = _utc_now()
+        credit = debt_credit_amount(transaction)
+        _mark_debt_remaining(debt, debt.remaining_amount - credit)
         await self._debts.update(debt)
 
 
@@ -165,9 +200,8 @@ class UpdateTransactionUseCase:
         goal = await self._goals.get_by_id(transaction.goal_id or "")
         if goal is None:
             return
-        goal.current_amount = quantize_money(goal.current_amount + transaction.amount)
-        if goal.current_amount >= goal.target_amount:
-            goal.is_completed = True
+        credit = goal_credit_amount(transaction)
+        _mark_goal_progress(goal, goal.current_amount + credit)
         await self._goals.update(goal)
 
     async def _reverse_goal_contribution(self, transaction: Transaction) -> None:
@@ -176,10 +210,11 @@ class UpdateTransactionUseCase:
         goal = await self._goals.get_by_id(transaction.goal_id or "")
         if goal is None:
             return
-        goal.current_amount = quantize_money(
-            max(Decimal("0"), goal.current_amount - transaction.amount)
+        credit = goal_credit_amount(transaction)
+        _mark_goal_progress(
+            goal,
+            max(Decimal("0"), goal.current_amount - credit),
         )
-        goal.is_completed = goal.current_amount >= goal.target_amount
         await self._goals.update(goal)
 
     async def _apply_debt_payment(self, transaction: Transaction) -> None:
@@ -188,12 +223,8 @@ class UpdateTransactionUseCase:
         debt = await self._debts.get_by_id(transaction.debt_id or "")
         if debt is None:
             return
-        remaining = quantize_money(
-            max(Decimal("0"), debt.remaining_amount - transaction.amount)
-        )
-        debt.remaining_amount = remaining
-        debt.status = DebtStatus.PAID if remaining <= 0 else DebtStatus.ACTIVE
-        debt.updated_at = _utc_now()
+        credit = debt_credit_amount(transaction)
+        _mark_debt_remaining(debt, debt.remaining_amount - credit)
         await self._debts.update(debt)
 
     async def _reverse_debt_payment(self, transaction: Transaction) -> None:
@@ -202,13 +233,8 @@ class UpdateTransactionUseCase:
         debt = await self._debts.get_by_id(transaction.debt_id or "")
         if debt is None:
             return
-        remaining = quantize_money(debt.remaining_amount + transaction.amount)
-        # Cap at original principal.
-        if remaining > debt.amount:
-            remaining = quantize_money(debt.amount)
-        debt.remaining_amount = remaining
-        debt.status = DebtStatus.PAID if remaining <= 0 else DebtStatus.ACTIVE
-        debt.updated_at = _utc_now()
+        credit = debt_credit_amount(transaction)
+        _mark_debt_remaining(debt, debt.remaining_amount + credit)
         await self._debts.update(debt)
 
 
@@ -243,21 +269,18 @@ class DeleteTransactionUseCase:
         if _is_goal_contribution(existing):
             goal = await self._goals.get_by_id(existing.goal_id or "")
             if goal is not None:
-                goal.current_amount = quantize_money(
-                    max(Decimal("0"), goal.current_amount - existing.amount)
+                credit = goal_credit_amount(existing)
+                _mark_goal_progress(
+                    goal,
+                    max(Decimal("0"), goal.current_amount - credit),
                 )
-                goal.is_completed = goal.current_amount >= goal.target_amount
                 await self._goals.update(goal)
 
         if self._debts is not None and _is_debt_payment(existing):
             debt = await self._debts.get_by_id(existing.debt_id or "")
             if debt is not None:
-                remaining = quantize_money(debt.remaining_amount + existing.amount)
-                if remaining > debt.amount:
-                    remaining = quantize_money(debt.amount)
-                debt.remaining_amount = remaining
-                debt.status = DebtStatus.PAID if remaining <= 0 else DebtStatus.ACTIVE
-                debt.updated_at = _utc_now()
+                credit = debt_credit_amount(existing)
+                _mark_debt_remaining(debt, debt.remaining_amount + credit)
                 await self._debts.update(debt)
 
         return await self._transactions.delete(transaction_id)
@@ -279,6 +302,9 @@ class ListTransactionsUseCase:
         date_to: Optional[datetime] = None,
         tags: Optional[Sequence[str]] = None,
         goal_id: Optional[str] = None,
+        debt_id: Optional[str] = None,
+        subscription_id: Optional[str] = None,
+        has_subscription: Optional[bool] = None,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> list[Transaction]:
@@ -291,6 +317,9 @@ class ListTransactionsUseCase:
             date_to=date_to,
             tags=tags,
             goal_id=goal_id,
+            debt_id=debt_id,
+            subscription_id=subscription_id,
+            has_subscription=has_subscription,
             limit=limit,
             offset=offset,
         )

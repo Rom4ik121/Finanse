@@ -125,6 +125,7 @@ def init_db(config: Optional[AppConfig] = None, *, echo: bool = False) -> Engine
 
     Base.metadata.create_all(bind=engine)
     _apply_sqlite_column_patches(engine)
+    _ensure_sqlite_indexes(engine)
     logger.info("Database schema initialized")
     return engine
 
@@ -136,9 +137,29 @@ def _apply_sqlite_column_patches(engine: Engine) -> None:
     patches = {
         "settings": [
             ("reminder_time", "VARCHAR(8) NOT NULL DEFAULT '09:00'"),
+            ("reminder_days", "INTEGER NOT NULL DEFAULT 3"),
+            ("check_balance_before_subscription", "BOOLEAN NOT NULL DEFAULT 1"),
         ],
         "transactions": [
             ("debt_id", "VARCHAR(36)"),
+            ("goal_credit_amount", "NUMERIC(18, 2)"),
+            ("debt_credit_amount", "NUMERIC(18, 2)"),
+            ("subscription_id", "VARCHAR(36)"),
+        ],
+        "goals": [
+            ("currency", "VARCHAR(16) NOT NULL DEFAULT 'RUB'"),
+            ("status", "VARCHAR(16) NOT NULL DEFAULT 'active'"),
+            ("cached_projection", "JSON"),
+        ],
+        "subscriptions": [
+            ("custom_interval_days", "INTEGER"),
+            ("start_date", "DATE"),
+            ("end_date", "DATE"),
+            ("max_payments", "INTEGER"),
+            ("payments_made", "INTEGER NOT NULL DEFAULT 0"),
+            ("status", "VARCHAR(16) NOT NULL DEFAULT 'active'"),
+            ("last_skip_date", "DATE"),
+            ("auto_charge", "BOOLEAN NOT NULL DEFAULT 1"),
         ],
     }
     with engine.begin() as conn:
@@ -154,6 +175,59 @@ def _apply_sqlite_column_patches(engine: Engine) -> None:
                     continue
                 conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
                 logger.info("Added column %s.%s", table, name)
+        # Sync goal status from legacy is_completed flag.
+        goals_cols = {
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(goals)").fetchall()
+        }
+        if "status" in goals_cols and "is_completed" in goals_cols:
+            conn.exec_driver_sql(
+                "UPDATE goals SET status = 'completed' "
+                "WHERE is_completed = 1 AND status = 'active'"
+            )
+        sub_cols = {
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(subscriptions)").fetchall()
+        }
+        if "start_date" in sub_cols:
+            conn.exec_driver_sql(
+                "UPDATE subscriptions SET start_date = date(next_billing_date) "
+                "WHERE start_date IS NULL"
+            )
+        if "status" in sub_cols:
+            conn.exec_driver_sql(
+                "UPDATE subscriptions SET status = CASE "
+                "WHEN is_active = 1 THEN 'active' ELSE 'paused' END "
+                "WHERE status IS NULL OR status = ''"
+            )
+
+
+def _ensure_sqlite_indexes(engine: Engine) -> None:
+    """Create composite indexes that speed list/filter queries on large datasets."""
+    if engine.url.get_backend_name() != "sqlite":
+        return
+    statements = (
+        "CREATE INDEX IF NOT EXISTS ix_transactions_date_desc ON transactions (date DESC)",
+        "CREATE INDEX IF NOT EXISTS ix_transactions_account_date "
+        "ON transactions (account_id, date DESC)",
+        "CREATE INDEX IF NOT EXISTS ix_transactions_type_date "
+        "ON transactions (type, date DESC)",
+        "CREATE INDEX IF NOT EXISTS ix_transactions_category_date "
+        "ON transactions (category, date DESC)",
+        "CREATE INDEX IF NOT EXISTS ix_goals_status ON goals (status)",
+        "CREATE INDEX IF NOT EXISTS ix_goals_deadline ON goals (deadline)",
+        "CREATE INDEX IF NOT EXISTS ix_debts_status ON debts (status)",
+        "CREATE INDEX IF NOT EXISTS ix_debts_due_date ON debts (due_date)",
+        "CREATE INDEX IF NOT EXISTS ix_subscriptions_status ON subscriptions (status)",
+        "CREATE INDEX IF NOT EXISTS ix_subscriptions_start_date ON subscriptions (start_date)",
+        "CREATE INDEX IF NOT EXISTS ix_subscriptions_next_billing "
+        "ON subscriptions (status, next_billing_date)",
+        "CREATE INDEX IF NOT EXISTS ix_transactions_subscription_id "
+        "ON transactions (subscription_id)",
+    )
+    with engine.begin() as conn:
+        for sql in statements:
+            conn.exec_driver_sql(sql)
 
 
 def reset_engine() -> None:

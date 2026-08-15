@@ -1,4 +1,4 @@
-"""Searchable currency ticker picker (dialog with live filter)."""
+"""Searchable currency ticker picker (fullscreen overlay with live filter)."""
 
 from __future__ import annotations
 
@@ -15,10 +15,32 @@ from lib.presentation.currency_options import (
 from lib.presentation.utils import tr
 
 
+def currency_row_matches(row: dict[str, str], query: str) -> bool:
+    """Match ticker code, symbol, or localized name."""
+    q = query.strip().casefold().replace(" ", "")
+    if not q:
+        return True
+    code = row.get("code", "").casefold()
+    name = row.get("name", "").casefold()
+    symbol = (row.get("symbol") or "").casefold()
+    return q in code or q in name or (bool(symbol) and q in symbol)
+
+
+def _sort_key(row: dict[str, str], query: str) -> tuple[int, str]:
+    q = query.strip().casefold()
+    code = row["code"].casefold()
+    if q and code == q:
+        return (0, row["code"])
+    if q and code.startswith(q):
+        return (1, row["code"])
+    return (2, row["code"])
+
+
 def _rows_from_currencies(
     currencies: Sequence[Currency] | None,
     *,
     lang: str,
+    include_crypto: bool = True,
 ) -> list[dict[str, str]]:
     if currencies:
         return [
@@ -28,13 +50,14 @@ def _rows_from_currencies(
                 "symbol": c.symbol or c.code,
             }
             for c in currencies
+            if include_crypto or not c.is_crypto
         ]
-    catalog = load_currency_catalog(include_crypto=True)
+    catalog = load_currency_catalog(include_crypto=include_crypto)
     return [
         {
             "code": row["code"],
             "name": _currency_display_name(row, lang),
-            "symbol": row["code"],
+            "symbol": row.get("symbol") or row["code"],
         }
         for row in catalog
     ]
@@ -61,12 +84,17 @@ class CurrencyTickerPicker(ft.Container):
         currencies: Sequence[Currency] | None = None,
         on_changed: Optional[Callable[[str], None]] = None,
         expand: bool = True,
+        include_crypto: bool = True,
     ) -> None:
         self._page = page
         self._lang = lang
         self._label = label
         self._on_changed = on_changed
-        self._rows = _rows_from_currencies(currencies, lang=lang)
+        self._include_crypto = include_crypto
+        self._overlay_key = f"currency_ticker_{id(self)}"
+        self._rows = _rows_from_currencies(
+            currencies, lang=lang, include_crypto=include_crypto
+        )
         self._value = normalize_currency_code(value)
 
         self._display = ft.Text(
@@ -119,7 +147,9 @@ class CurrencyTickerPicker(ft.Container):
 
     def set_currencies(self, currencies: Sequence[Currency]) -> None:
         """Refresh catalog used by the picker dialog."""
-        self._rows = _rows_from_currencies(currencies, lang=self._lang)
+        self._rows = _rows_from_currencies(
+            currencies, lang=self._lang, include_crypto=self._include_crypto
+        )
         self._display.value = _label_for(self._value, self._rows)
         try:
             self._display.update()
@@ -136,10 +166,21 @@ class CurrencyTickerPicker(ft.Container):
         if notify and self._on_changed is not None:
             self._on_changed(self._value)
 
+    def close_overlay(self) -> None:
+        from lib.presentation.widgets.fullscreen_form import dismiss_fullscreen
+
+        dismiss_fullscreen(self._page, key=self._overlay_key)
+
     def open(self) -> None:
-        """Open searchable ticker dialog."""
+        """Open searchable ticker picker as a fullscreen overlay."""
+        from lib.presentation.styles import page_header
+        from lib.presentation.widgets.fullscreen_form import dismiss_fullscreen
+
         lang = self._lang
-        list_col = ft.Column(spacing=2, scroll=ft.ScrollMode.AUTO, expand=True)
+        overlay_key = self._overlay_key
+        dismiss_fullscreen(self._page, key=overlay_key)
+
+        list_col = ft.ListView(spacing=2, expand=True)
         search = ft.TextField(
             label=tr("currencies.search", lang),
             hint_text=tr("currencies.search_hint", lang),
@@ -148,29 +189,16 @@ class CurrencyTickerPicker(ft.Container):
             dense=True,
             border_radius=14,
             filled=True,
-            bgcolor=ft.Colors.SURFACE,
+            bgcolor=ft.Colors.SURFACE_CONTAINER,
             capitalization=ft.TextCapitalization.CHARACTERS,
         )
 
-        def _matches(row: dict[str, str], query: str) -> bool:
-            if not query:
-                return True
-            q = query.strip().casefold()
-            return q in row["code"].casefold() or q in row["name"].casefold()
+        def _close(_e: ft.ControlEvent | None = None) -> None:
+            dismiss_fullscreen(self._page, key=overlay_key)
 
         def _fill(query: str = "") -> None:
-            rows = [r for r in self._rows if _matches(r, query)]
-            # Prefer ticker prefix matches first.
-            q = query.strip().casefold()
-            if q:
-                rows.sort(
-                    key=lambda r: (
-                        0 if r["code"].casefold().startswith(q) else 1,
-                        r["code"],
-                    )
-                )
-            else:
-                rows.sort(key=lambda r: r["code"])
+            rows = [r for r in self._rows if currency_row_matches(r, query)]
+            rows.sort(key=lambda r: _sort_key(r, query))
 
             if not rows:
                 list_col.controls = [
@@ -186,14 +214,14 @@ class CurrencyTickerPicker(ft.Container):
                 list_col.controls = [
                     ft.ListTile(
                         leading=ft.CircleAvatar(
-                            content=ft.Text(row["code"][:3], size=11)
+                            content=ft.Text(row["code"][:4], size=10)
                         ),
                         title=ft.Text(row["code"], weight=ft.FontWeight.W_700),
                         subtitle=ft.Text(row["name"], size=12),
                         selected=row["code"] == self._value,
                         on_click=lambda _e, code=row["code"]: _pick(code),
                     )
-                    for row in rows[:120]
+                    for row in rows
                 ]
             try:
                 list_col.update()
@@ -201,7 +229,7 @@ class CurrencyTickerPicker(ft.Container):
                 pass
 
         def _pick(code: str) -> None:
-            self._page.pop_dialog()
+            _close()
             self.set_value(code, notify=True)
 
         def _on_search(_e: ft.ControlEvent) -> None:
@@ -215,32 +243,49 @@ class CurrencyTickerPicker(ft.Container):
             if exact is not None:
                 _pick(exact["code"])
                 return
-            filtered = [r for r in self._rows if _matches(r, search.value or "")]
-            if len(filtered) == 1:
+            filtered = [r for r in self._rows if currency_row_matches(r, search.value or "")]
+            filtered.sort(key=lambda r: _sort_key(r, search.value or ""))
+            if filtered:
                 _pick(filtered[0]["code"])
 
         search.on_change = _on_search
         search.on_submit = _on_submit
         _fill("")
 
-        dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Text(self._label),
-            content=ft.Container(
-                width=420,
-                height=420,
+        overlay = ft.Container(
+            left=0,
+            top=0,
+            right=0,
+            bottom=0,
+            bgcolor=ft.Colors.SURFACE,
+            data=overlay_key,
+            content=ft.SafeArea(
+                expand=True,
                 content=ft.Column(
-                    spacing=10,
                     expand=True,
-                    controls=[search, list_col],
+                    spacing=0,
+                    controls=[
+                        page_header(
+                            self._label,
+                            leading=ft.IconButton(
+                                icon=ft.Icons.ARROW_BACK,
+                                icon_color=ft.Colors.ON_SURFACE,
+                                tooltip=tr("action.cancel", lang),
+                                on_click=_close,
+                            ),
+                        ),
+                        ft.Container(
+                            expand=True,
+                            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+                            content=ft.Column(
+                                expand=True,
+                                spacing=10,
+                                controls=[search, list_col],
+                            ),
+                        ),
+                    ],
                 ),
             ),
-            actions=[
-                ft.TextButton(
-                    tr("action.cancel", lang),
-                    on_click=lambda _e: self._page.pop_dialog(),
-                )
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
         )
-        self._page.show_dialog(dialog)
+        self._page.overlay.append(overlay)
+        self._page.update()

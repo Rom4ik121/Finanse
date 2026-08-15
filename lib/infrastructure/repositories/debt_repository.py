@@ -6,7 +6,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import select
 
@@ -27,7 +27,9 @@ def _to_entity(model: DebtModel) -> Debt:
         currency=model.currency,
         direction=DebtDirection(model.direction),
         status=DebtStatus(model.status),
-        interest_rate=Decimal(str(model.interest_rate)) if model.interest_rate is not None else None,
+        interest_rate=(
+            Decimal(str(model.interest_rate)) if model.interest_rate is not None else None
+        ),
         due_date=ensure_utc(model.due_date),
         started_at=ensure_utc(model.started_at) or datetime.now(timezone.utc),
         comment=model.comment or "",
@@ -58,6 +60,40 @@ def _apply_entity(model: DebtModel, entity: Debt) -> None:
     model.updated_at = ensure_utc(entity.updated_at) or datetime.now(timezone.utc)
 
 
+def _sort_debts(debts: list[Debt], sort_by: str) -> list[Debt]:
+    key = (sort_by or "due_date").lower()
+    far = datetime.max.replace(tzinfo=timezone.utc)
+    if key == "remaining":
+        return sorted(debts, key=lambda d: (d.remaining_amount, d.counterparty))
+    if key == "amount":
+        return sorted(debts, key=lambda d: (d.amount, d.counterparty), reverse=True)
+    if key == "interest":
+        return sorted(
+            debts,
+            key=lambda d: (d.interest_rate is None, -(d.interest_rate or 0), d.counterparty),
+        )
+    if key == "created_at":
+        return sorted(debts, key=lambda d: d.created_at, reverse=True)
+    if key == "counterparty":
+        return sorted(debts, key=lambda d: d.counterparty.lower())
+    if key == "status":
+        order = {
+            DebtStatus.OVERDUE: 0,
+            DebtStatus.ACTIVE: 1,
+            DebtStatus.PAID: 2,
+            DebtStatus.ARCHIVED: 3,
+        }
+        return sorted(
+            debts,
+            key=lambda d: (order.get(d.status, 9), d.counterparty.lower()),
+        )
+    # due_date default — soonest first, nulls last
+    return sorted(
+        debts,
+        key=lambda d: (d.due_date is None, d.due_date or far, d.counterparty.lower()),
+    )
+
+
 class SqlAlchemyDebtRepository(DebtRepository):
     """Debt persistence via SQLAlchemy sync session + ``asyncio.to_thread``."""
 
@@ -79,10 +115,14 @@ class SqlAlchemyDebtRepository(DebtRepository):
     async def list(
         self,
         *,
-        status: Optional[DebtStatus] = None,
-        direction: Optional[DebtDirection] = None,
+        status: Optional[DebtStatus | str] = None,
+        direction: Optional[DebtDirection | str] = None,
+        currency: Optional[str] = None,
+        sort_by: str = "due_date",
     ) -> list[Debt]:
-        return await asyncio.to_thread(self._list_sync, status, direction)
+        return await asyncio.to_thread(
+            self._list_sync, status, direction, currency, sort_by
+        )
 
     def _create_sync(self, entity: Debt) -> Debt:
         with session_scope(self._session_factory) as session:
@@ -121,8 +161,10 @@ class SqlAlchemyDebtRepository(DebtRepository):
 
     def _list_sync(
         self,
-        status: Optional[DebtStatus],
-        direction: Optional[DebtDirection],
+        status: Optional[DebtStatus | str],
+        direction: Optional[DebtDirection | str],
+        currency: Optional[str],
+        sort_by: str,
     ) -> list[Debt]:
         with session_scope(self._session_factory) as session:
             stmt = select(DebtModel)
@@ -130,7 +172,13 @@ class SqlAlchemyDebtRepository(DebtRepository):
                 value = status.value if isinstance(status, DebtStatus) else str(status)
                 stmt = stmt.where(DebtModel.status == value)
             if direction is not None:
-                value = direction.value if isinstance(direction, DebtDirection) else str(direction)
+                value = (
+                    direction.value
+                    if isinstance(direction, DebtDirection)
+                    else str(direction)
+                )
                 stmt = stmt.where(DebtModel.direction == value)
-            stmt = stmt.order_by(DebtModel.due_date.asc(), DebtModel.counterparty)
-            return [_to_entity(r) for r in session.scalars(stmt).all()]
+            if currency is not None:
+                stmt = stmt.where(DebtModel.currency == currency.upper())
+            entities = [_to_entity(r) for r in session.scalars(stmt).all()]
+            return _sort_debts(entities, sort_by)

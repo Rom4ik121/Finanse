@@ -39,6 +39,9 @@ class TransactionRepository(ABC):
         date_to: Optional[datetime] = None,
         tags: Optional[Sequence[str]] = None,
         goal_id: Optional[str] = None,
+        debt_id: Optional[str] = None,
+        subscription_id: Optional[str] = None,
+        has_subscription: Optional[bool] = None,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> list[Transaction]:

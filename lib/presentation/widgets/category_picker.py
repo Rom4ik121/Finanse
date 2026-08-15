@@ -1,4 +1,4 @@
-"""Category dropdown with create / edit dialog (icon + color)."""
+"""Category picker — fullscreen list with icons, plus create/edit form."""
 
 from __future__ import annotations
 
@@ -9,13 +9,17 @@ import flet as ft
 from lib.core.config import CATEGORY_COLORS, CATEGORY_ICON_GROUPS, CATEGORY_ICONS
 from lib.domain.entities.category import Category, CategoryKind
 from lib.domain.entities.transaction import TransactionType
+from lib.presentation.styles import page_header
 from lib.presentation.utils import category_icon, run_async, snack, tr
-from lib.presentation.widgets.fullscreen_form import open_fullscreen_form
+from lib.infrastructure.services.localization import localize_category_name
+from lib.presentation.widgets.appearance_picker import open_color_picker, open_icon_picker
+from lib.presentation.widgets.fullscreen_form import dismiss_fullscreen, open_fullscreen_form
 
 if TYPE_CHECKING:
     from lib.presentation.state.app_state import AppState
 
 _CREATE_KEY = "__create__"
+_PICKER_KEY = "category_picker"
 
 
 class CategoryPicker(ft.Column):
@@ -37,11 +41,53 @@ class CategoryPicker(ft.Column):
         self._categories: list[Category] = []
         self._selected_name = initial_name or ""
 
-        self._dropdown = ft.Dropdown(
-            label=tr("field.category", state.language),
+        self._icon_badge = ft.Container(
+            width=34,
+            height=34,
+            border_radius=11,
+            bgcolor=ft.Colors.PRIMARY_CONTAINER,
+            alignment=ft.Alignment.CENTER,
+            content=ft.Icon(ft.Icons.CATEGORY_OUTLINED, size=18),
+        )
+        self._caption = ft.Text(
+            tr("field.category", state.language),
+            size=11,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+        )
+        self._display = ft.Text(
+            tr("category.create", state.language),
+            size=14,
+            weight=ft.FontWeight.W_600,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            max_lines=1,
             expand=True,
-            dense=True,
-            on_select=self._on_select,
+        )
+        self._field = ft.Container(
+            expand=True,
+            border_radius=14,
+            bgcolor=ft.Colors.SURFACE,
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+            ink=True,
+            on_click=lambda _e: self._open_picker(),
+            content=ft.Row(
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    self._icon_badge,
+                    ft.Column(
+                        spacing=2,
+                        tight=True,
+                        expand=True,
+                        controls=[self._caption, self._display],
+                    ),
+                    ft.Icon(
+                        ft.Icons.EXPAND_MORE,
+                        size=20,
+                        color=ft.Colors.PRIMARY,
+                    ),
+                ],
+            ),
         )
         self._edit_btn = ft.IconButton(
             icon=ft.Icons.PALETTE_OUTLINED,
@@ -49,24 +95,28 @@ class CategoryPicker(ft.Column):
             tooltip=tr("category.edit", state.language),
             on_click=lambda _e: self._open_editor(existing_name=self.selected_name),
         )
+        self._empty_hint = ft.Text(
+            tr("category.empty_hint", state.language),
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            visible=False,
+        )
         super().__init__(
-            spacing=0,
+            spacing=4,
             tight=True,
             controls=[
                 ft.Row(
                     spacing=4,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[self._dropdown, self._edit_btn],
-                )
+                    controls=[self._field, self._edit_btn],
+                ),
+                self._empty_hint,
             ],
         )
 
     @property
     def selected_name(self) -> str:
-        value = self._dropdown.value or self._selected_name
-        if value == _CREATE_KEY:
-            return self._selected_name
-        return (value or "").strip()
+        return (self._selected_name or "").strip()
 
     def has_category(self, name: str) -> bool:
         """True when ``name`` is already loaded in this picker (no create needed)."""
@@ -78,10 +128,46 @@ class CategoryPicker(ft.Column):
             c.name == needle or c.name.casefold() == folded for c in self._categories
         )
 
+    @property
+    def is_empty(self) -> bool:
+        """True when the user has not created any categories for this type yet."""
+        return not self._categories
+
     def set_tx_type(self, tx_type: str) -> None:
         """Refresh options when income/expense changes."""
         self._tx_type = tx_type
         run_async(self._page, self.reload)
+
+    def _selected_category(self) -> Category | None:
+        name = self.selected_name
+        if not name:
+            return None
+        return next((c for c in self._categories if c.name == name), None)
+
+    def _sync_display(self) -> None:
+        lang = self._state.language
+        category = self._selected_category()
+        if category is None:
+            self._display.value = tr("category.create", lang)
+            self._icon_badge.bgcolor = ft.Colors.PRIMARY_CONTAINER
+            self._icon_badge.content = ft.Icon(
+                ft.Icons.ADD,
+                size=18,
+                color=ft.Colors.ON_PRIMARY_CONTAINER,
+            )
+        else:
+            self._display.value = localize_category_name(category.name, lang)
+            self._icon_badge.bgcolor = category.color or ft.Colors.PRIMARY_CONTAINER
+            self._icon_badge.content = ft.Icon(
+                category_icon(category.icon),
+                size=18,
+                color="#FFFFFF",
+            )
+        try:
+            self._display.update()
+            self._icon_badge.update()
+        except Exception:  # noqa: BLE001
+            pass
 
     async def reload(self) -> None:
         """Load categories for the current transaction type."""
@@ -91,37 +177,187 @@ class CategoryPicker(ft.Column):
             self._categories = []
         else:
             self._categories = await uc.execute(for_type=self._tx_type)
-        options: list[ft.DropdownOption] = [
-            ft.DropdownOption(key=c.name, text=c.name) for c in self._categories
-        ]
-        options.append(
-            ft.DropdownOption(
-                key=_CREATE_KEY,
-                text=tr("category.create", lang),
-            )
-        )
-        self._dropdown.options = options
+
         if self._selected_name and any(
             c.name == self._selected_name for c in self._categories
         ):
-            self._dropdown.value = self._selected_name
+            pass
         elif self._categories:
-            self._dropdown.value = self._categories[0].name
             self._selected_name = self._categories[0].name
         else:
-            self._dropdown.value = _CREATE_KEY
+            self._selected_name = ""
+
+        self._empty_hint.value = tr("category.empty_hint", lang)
+        self._empty_hint.visible = not self._categories
+        self._sync_display()
         try:
-            self._dropdown.update()
+            self._empty_hint.update()
         except Exception:  # noqa: BLE001
             pass
 
-    def _on_select(self, _e: ft.ControlEvent) -> None:
-        if self._dropdown.value == _CREATE_KEY:
+    def prompt_if_empty(self) -> None:
+        """Open the create-category form when the catalog is still empty."""
+        if not self._categories:
             self._open_editor(existing_name=None)
-            return
-        self._selected_name = self._dropdown.value or ""
+
+    def _pick(self, name: str) -> None:
+        self._selected_name = name
+        self._sync_display()
         if self._on_changed:
             self._on_changed()
+
+    def _open_picker(self) -> None:
+        """Fullscreen category list with icons."""
+        lang = self._state.language
+        dismiss_fullscreen(self._page, key=_PICKER_KEY)
+
+        list_col = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, expand=True)
+
+        def _close(_e: ft.ControlEvent | None = None) -> None:
+            dismiss_fullscreen(self._page, key=_PICKER_KEY)
+
+        def _select(name: str) -> None:
+            _close()
+            if name == _CREATE_KEY:
+                self._open_editor(existing_name=None)
+                return
+            self._pick(name)
+
+        def _tile(category: Category) -> ft.Control:
+            selected = category.name == self.selected_name
+            return ft.Container(
+                border_radius=14,
+                bgcolor=(
+                    ft.Colors.PRIMARY_CONTAINER
+                    if selected
+                    else ft.Colors.SURFACE_CONTAINER
+                ),
+                border=ft.Border.all(
+                    1,
+                    ft.Colors.PRIMARY if selected else ft.Colors.OUTLINE_VARIANT,
+                ),
+                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+                ink=True,
+                on_click=lambda _e, n=category.name: _select(n),
+                content=ft.Row(
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Container(
+                            width=40,
+                            height=40,
+                            border_radius=12,
+                            bgcolor=category.color or ft.Colors.PRIMARY,
+                            alignment=ft.Alignment.CENTER,
+                            content=ft.Icon(
+                                category_icon(category.icon),
+                                size=20,
+                                color="#FFFFFF",
+                            ),
+                        ),
+                        ft.Text(
+                            localize_category_name(category.name, self._state.language),
+                            size=15,
+                            weight=ft.FontWeight.W_600,
+                            expand=True,
+                            overflow=ft.TextOverflow.ELLIPSIS,
+                            max_lines=1,
+                        ),
+                        ft.Icon(
+                            ft.Icons.CHECK_CIRCLE if selected else ft.Icons.CHEVRON_RIGHT,
+                            size=20,
+                            color=(
+                                ft.Colors.PRIMARY
+                                if selected
+                                else ft.Colors.ON_SURFACE_VARIANT
+                            ),
+                        ),
+                    ],
+                ),
+            )
+
+        tiles: list[ft.Control] = [_tile(c) for c in self._categories]
+        tiles.append(
+            ft.Container(
+                border_radius=14,
+                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+                padding=ft.Padding.symmetric(horizontal=12, vertical=12),
+                ink=True,
+                on_click=lambda _e: _select(_CREATE_KEY),
+                content=ft.Row(
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Container(
+                            width=40,
+                            height=40,
+                            border_radius=12,
+                            bgcolor=ft.Colors.PRIMARY_CONTAINER,
+                            alignment=ft.Alignment.CENTER,
+                            content=ft.Icon(
+                                ft.Icons.ADD,
+                                size=20,
+                                color=ft.Colors.ON_PRIMARY_CONTAINER,
+                            ),
+                        ),
+                        ft.Text(
+                            tr("category.create", lang),
+                            size=15,
+                            weight=ft.FontWeight.W_700,
+                            expand=True,
+                        ),
+                    ],
+                ),
+            )
+        )
+        if not self._categories:
+            list_col.controls = [
+                ft.Container(
+                    padding=16,
+                    content=ft.Text(
+                        tr("category.empty_hint", lang),
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                ),
+                *tiles,
+            ]
+        else:
+            list_col.controls = tiles
+
+        overlay = ft.Container(
+            left=0,
+            top=0,
+            right=0,
+            bottom=0,
+            bgcolor=ft.Colors.SURFACE,
+            data=_PICKER_KEY,
+            content=ft.SafeArea(
+                expand=True,
+                content=ft.Column(
+                    expand=True,
+                    spacing=0,
+                    controls=[
+                        page_header(
+                            tr("field.category", lang),
+                            leading=ft.IconButton(
+                                icon=ft.Icons.ARROW_BACK,
+                                icon_color=ft.Colors.ON_SURFACE,
+                                tooltip=tr("action.cancel", lang),
+                                on_click=_close,
+                            ),
+                        ),
+                        ft.Container(
+                            expand=True,
+                            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+                            content=list_col,
+                        ),
+                    ],
+                ),
+            ),
+        )
+        self._page.overlay.append(overlay)
+        self._page.update()
 
     def _open_editor(self, *, existing_name: str | None) -> None:
         lang = self._state.language
@@ -140,8 +376,6 @@ class CategoryPicker(ft.Column):
         )
         selected_icon = {"value": default_icon}
         selected_color = {"value": default_color}
-        icons_open = {"value": False}
-        colors_open = {"value": False}
 
         name_tf = ft.TextField(
             label=tr("field.name", lang),
@@ -177,219 +411,92 @@ class CategoryPicker(ft.Column):
             expand=True,
             dense=True,
         )
-
         icon_preview = ft.Container(
             width=48,
             height=48,
             border_radius=14,
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
             alignment=ft.Alignment.CENTER,
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
-            border=ft.Border.all(2, ft.Colors.OUTLINE_VARIANT),
+            border=ft.Border.all(2, selected_color["value"]),
             content=ft.Icon(category_icon(selected_icon["value"]), size=26),
-        )
-        color_preview = ft.Container(
-            width=48,
-            height=48,
-            border_radius=24,
-            bgcolor=selected_color["value"],
-            border=ft.Border.all(2, ft.Colors.OUTLINE_VARIANT),
         )
         icon_toggle_label = ft.Text(
             tr("picker.choose_icon", lang),
-            size=13,
+            size=12,
+            color=ft.Colors.PRIMARY,
             weight=ft.FontWeight.W_600,
-            expand=True,
         )
         color_toggle_label = ft.Text(
             tr("picker.choose_color", lang),
-            size=13,
+            size=12,
+            color=ft.Colors.PRIMARY,
             weight=ft.FontWeight.W_600,
-            expand=True,
         )
-        icon_chevron = ft.Icon(ft.Icons.EXPAND_MORE, size=20)
-        color_chevron = ft.Icon(ft.Icons.EXPAND_MORE, size=20)
-
-        icon_groups_col = ft.Column(spacing=12, tight=True)
-        color_grid = ft.Row(wrap=True, spacing=6, run_spacing=6)
-
-        icon_panel = ft.Container(
-            visible=False,
-            padding=ft.Padding.only(top=8),
-            content=ft.Container(
-                height=280,
-                border_radius=14,
-                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-                padding=10,
-                content=ft.Column(
-                    scroll=ft.ScrollMode.AUTO,
-                    spacing=0,
-                    controls=[icon_groups_col],
-                ),
-            ),
-        )
-        color_panel = ft.Container(
-            visible=False,
-            padding=ft.Padding.only(top=8),
-            content=ft.Container(
-                height=160,
-                border_radius=14,
-                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-                border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-                padding=10,
-                content=ft.Column(
-                    scroll=ft.ScrollMode.AUTO,
-                    spacing=0,
-                    controls=[color_grid],
-                ),
-            ),
+        icon_chevron = ft.Icon(ft.Icons.CHEVRON_RIGHT, size=22)
+        color_chevron = ft.Icon(ft.Icons.CHEVRON_RIGHT, size=22)
+        color_swatch = ft.Container(
+            width=32,
+            height=32,
+            border_radius=16,
+            bgcolor=selected_color["value"],
         )
 
         def _refresh_previews() -> None:
             icon_preview.content = ft.Icon(
                 category_icon(selected_icon["value"]),
                 size=26,
-                color=selected_color["value"],
             )
             icon_preview.border = ft.Border.all(2, selected_color["value"])
-            color_preview.bgcolor = selected_color["value"]
-            icon_chevron.icon = (
-                ft.Icons.EXPAND_LESS if icons_open["value"] else ft.Icons.EXPAND_MORE
-            )
-            color_chevron.icon = (
-                ft.Icons.EXPAND_LESS if colors_open["value"] else ft.Icons.EXPAND_MORE
-            )
-            icon_toggle_label.value = (
-                tr("picker.close", lang)
-                if icons_open["value"]
-                else tr("picker.choose_icon", lang)
-            )
-            color_toggle_label.value = (
-                tr("picker.close", lang)
-                if colors_open["value"]
-                else tr("picker.choose_color", lang)
-            )
+            color_swatch.bgcolor = selected_color["value"]
             try:
                 icon_preview.update()
-                color_preview.update()
-                icon_chevron.update()
-                color_chevron.update()
-                icon_toggle_label.update()
-                color_toggle_label.update()
+                color_swatch.update()
             except Exception:  # noqa: BLE001
                 pass
-
-        def _icon_tile(key: str) -> ft.Container:
-            active = key == selected_icon["value"]
-            return ft.Container(
-                width=40,
-                height=40,
-                border_radius=12,
-                bgcolor=(
-                    ft.Colors.PRIMARY_CONTAINER if active else ft.Colors.SURFACE
-                ),
-                border=ft.Border.all(
-                    2,
-                    selected_color["value"] if active else ft.Colors.OUTLINE_VARIANT,
-                ),
-                alignment=ft.Alignment.CENTER,
-                ink=True,
-                on_click=lambda _e, k=key: _select_icon(k),
-                content=ft.Icon(
-                    category_icon(key),
-                    size=20,
-                    color=selected_color["value"],
-                ),
-            )
-
-        def _rebuild_grids() -> None:
-            icon_groups_col.controls = []
-            for group_key, keys in CATEGORY_ICON_GROUPS:
-                icon_groups_col.controls.append(
-                    ft.Text(
-                        tr(group_key, lang),
-                        size=12,
-                        weight=ft.FontWeight.W_600,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                    )
-                )
-                icon_groups_col.controls.append(
-                    ft.Row(
-                        wrap=True,
-                        spacing=6,
-                        run_spacing=6,
-                        controls=[_icon_tile(k) for k in keys],
-                    )
-                )
-            color_grid.controls = []
-            for color in CATEGORY_COLORS:
-                active = color == selected_color["value"]
-                color_grid.controls.append(
-                    ft.Container(
-                        width=32,
-                        height=32,
-                        border_radius=16,
-                        bgcolor=color,
-                        border=ft.Border.all(
-                            3,
-                            ft.Colors.ON_SURFACE if active else ft.Colors.TRANSPARENT,
-                        ),
-                        ink=True,
-                        on_click=lambda _e, c=color: _select_color(c),
-                    )
-                )
-            try:
-                icon_groups_col.update()
-                color_grid.update()
-            except Exception:  # noqa: BLE001
-                pass
-
-        def _set_panel(kind: str, open_: bool) -> None:
-            if kind == "icon":
-                icons_open["value"] = open_
-                if open_:
-                    colors_open["value"] = False
-            else:
-                colors_open["value"] = open_
-                if open_:
-                    icons_open["value"] = False
-            icon_panel.visible = icons_open["value"]
-            color_panel.visible = colors_open["value"]
-            _refresh_previews()
-            try:
-                icon_panel.update()
-                color_panel.update()
-            except Exception:  # noqa: BLE001
-                pass
-
-        def _toggle_icons(_e: ft.ControlEvent | None = None) -> None:
-            _set_panel("icon", not icons_open["value"])
-
-        def _toggle_colors(_e: ft.ControlEvent | None = None) -> None:
-            _set_panel("color", not colors_open["value"])
 
         def _select_icon(key: str) -> None:
             selected_icon["value"] = key
-            _rebuild_grids()
-            _set_panel("icon", False)
+            _refresh_previews()
 
-        def _select_color(color: str) -> None:
-            selected_color["value"] = color
-            _rebuild_grids()
-            _set_panel("color", False)
+        def _select_color(hex_color: str) -> None:
+            selected_color["value"] = hex_color
+            _refresh_previews()
 
-        _rebuild_grids()
+        def _open_icons(_e: ft.ControlEvent | None = None) -> None:
+            open_icon_picker(
+                self._page,
+                lang=lang,
+                groups=CATEGORY_ICON_GROUPS,
+                selected=selected_icon["value"],
+                on_select=_select_icon,
+                render_icon=lambda key: ft.Icon(
+                    category_icon(key), size=22, color="#FFFFFF"
+                ),
+                overlay_key="category_icon_picker",
+                accent=selected_color["value"],
+            )
+
+        def _open_colors(_e: ft.ControlEvent | None = None) -> None:
+            open_color_picker(
+                self._page,
+                lang=lang,
+                colors=CATEGORY_COLORS,
+                selected=selected_color["value"],
+                on_select=_select_color,
+                overlay_key="category_color_picker",
+            )
+
         _refresh_previews()
 
         icon_toggle = ft.Container(
-            padding=ft.Padding.symmetric(horizontal=10, vertical=8),
             border_radius=14,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+            padding=12,
             ink=True,
-            on_click=_toggle_icons,
+            on_click=_open_icons,
             content=ft.Row(
-                spacing=10,
+                spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     icon_preview,
@@ -411,17 +518,17 @@ class CategoryPicker(ft.Column):
             ),
         )
         color_toggle = ft.Container(
-            padding=ft.Padding.symmetric(horizontal=10, vertical=8),
             border_radius=14,
             bgcolor=ft.Colors.SURFACE_CONTAINER,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+            padding=12,
             ink=True,
-            on_click=_toggle_colors,
+            on_click=_open_colors,
             content=ft.Row(
-                spacing=10,
+                spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    color_preview,
+                    color_swatch,
                     ft.Column(
                         spacing=2,
                         tight=True,
@@ -474,11 +581,6 @@ class CategoryPicker(ft.Column):
                 return
             close()
             await self.reload()
-            self._dropdown.value = self._selected_name
-            try:
-                self._dropdown.update()
-            except Exception:  # noqa: BLE001
-                pass
             if self._on_changed:
                 self._on_changed()
             snack(self._page, tr("action.saved", lang))
@@ -496,9 +598,7 @@ class CategoryPicker(ft.Column):
                 name_tf,
                 kind_dd,
                 icon_toggle,
-                icon_panel,
                 color_toggle,
-                color_panel,
             ],
             on_save=_save,
         )

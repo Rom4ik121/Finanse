@@ -55,11 +55,13 @@ def make_goal(
     name: str = "Trip",
     target: str | Decimal = "500",
     current: str | Decimal = "0",
+    currency: str = "RUB",
 ) -> Goal:
     return Goal(
         name=name,
         target_amount=Decimal(str(target)),
         current_amount=Decimal(str(current)),
+        currency=currency,
     )
 
 
@@ -90,6 +92,8 @@ def make_subscription(
     periodicity: Periodicity = Periodicity.MONTHLY,
     next_billing: datetime | None = None,
     currency: str = "RUB",
+    custom_interval_days: int | None = None,
+    max_payments: int | None = None,
 ) -> Subscription:
     return Subscription(
         name=name,
@@ -98,6 +102,8 @@ def make_subscription(
         account_id=account_id,
         category="Прочее",
         periodicity=periodicity,
+        custom_interval_days=custom_interval_days,
+        max_payments=max_payments,
         next_billing_date=next_billing or datetime.now(timezone.utc),
         is_active=True,
     )

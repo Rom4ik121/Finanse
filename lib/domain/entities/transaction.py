@@ -42,11 +42,18 @@ class Transaction(BaseModel):
     updated_at: datetime = Field(default_factory=_utc_now)
     goal_id: Optional[str] = None
     debt_id: Optional[str] = None
+    subscription_id: Optional[str] = None
+    # Amount credited to the linked goal in the goal's currency (FX-aware).
+    goal_credit_amount: Optional[Decimal] = None
+    # Amount applied to the linked debt remaining in the debt's currency (FX-aware).
+    debt_credit_amount: Optional[Decimal] = None
 
-    @field_validator("amount", mode="before")
+    @field_validator("amount", "goal_credit_amount", "debt_credit_amount", mode="before")
     @classmethod
-    def _quantize_amount(cls, value: object) -> Decimal:
-        return quantize_money(value)  # type: ignore[arg-type]
+    def _quantize_amount(cls, value: object) -> object:
+        if value is None:
+            return None
+        return quantize_money(value)
 
     @field_validator("date", "created_at", "updated_at", mode="before")
     @classmethod

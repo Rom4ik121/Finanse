@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -27,6 +28,10 @@ def _utc_now() -> datetime:
     from datetime import timezone
 
     return datetime.now(timezone.utc)
+
+
+def _utc_today() -> date:
+    return _utc_now().date()
 
 
 class AccountModel(Base):
@@ -80,6 +85,18 @@ class TransactionModel(Base):
     debt_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("debts.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    goal_credit_amount: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(18, 2), nullable=True
+    )
+    debt_credit_amount: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(18, 2), nullable=True
+    )
+    subscription_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("subscriptions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utc_now
     )
@@ -106,10 +123,17 @@ class GoalModel(Base):
     current_amount: Mapped[Decimal] = mapped_column(
         Numeric(18, 2), nullable=False, default=Decimal("0.00")
     )
-    deadline: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False, default="RUB")
+    deadline: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     category_link: Mapped[str] = mapped_column(String(128), nullable=False, default="Накопление")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="active", index=True
+    )
     is_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    cached_projection: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utc_now
     )
@@ -130,7 +154,9 @@ class DebtModel(Base):
     direction: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="active", index=True)
     interest_rate: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 4), nullable=True)
-    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    due_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utc_now
     )
@@ -162,13 +188,25 @@ class SubscriptionModel(Base):
     )
     category: Mapped[str] = mapped_column(String(128), nullable=False, default="Прочее")
     periodicity: Mapped[str] = mapped_column(String(16), nullable=False, default="monthly")
+    custom_interval_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    start_date: Mapped[date] = mapped_column(
+        Date, nullable=False, index=True, default=_utc_today
+    )
+    end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    max_payments: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    payments_made: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     next_billing_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="active", index=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    auto_charge: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_charged_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    last_skip_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     comment: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utc_now
@@ -256,6 +294,10 @@ class SettingsModel(Base):
     goal_milestones: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     low_balance_threshold: Mapped[Optional[float]] = mapped_column(Numeric(18, 2), nullable=True)
     reminder_time: Mapped[str] = mapped_column(String(8), nullable=False, default="09:00")
+    reminder_days: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    check_balance_before_subscription: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
     pin_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     pin_salt: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     biometric_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

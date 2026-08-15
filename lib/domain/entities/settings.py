@@ -35,8 +35,18 @@ class AppSettings(BaseModel):
     goal_milestones: bool = True
     low_balance_threshold: Optional[float] = None
     reminder_time: str = "09:00"  # local HH:MM for daily reminder sweep
+    reminder_days: int = 3  # days before subscription billing to remind
+    check_balance_before_subscription: bool = True
     biometric_enabled: bool = False
     updated_at: datetime = Field(default_factory=_utc_now)
+
+    @field_validator("reminder_days")
+    @classmethod
+    def _validate_reminder_days(cls, value: int) -> int:
+        days = int(value)
+        if days < 0 or days > 365:
+            raise ValueError("reminder_days must be between 0 and 365")
+        return days
 
     @field_validator("reminder_time")
     @classmethod

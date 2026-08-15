@@ -32,6 +32,17 @@ def _to_entity(model: TransactionModel) -> Transaction:
         currency=model.currency,
         goal_id=model.goal_id,
         debt_id=getattr(model, "debt_id", None),
+        subscription_id=getattr(model, "subscription_id", None),
+        goal_credit_amount=(
+            Decimal(str(model.goal_credit_amount))
+            if getattr(model, "goal_credit_amount", None) is not None
+            else None
+        ),
+        debt_credit_amount=(
+            Decimal(str(model.debt_credit_amount))
+            if getattr(model, "debt_credit_amount", None) is not None
+            else None
+        ),
         created_at=ensure_utc(model.created_at) or datetime.now(timezone.utc),
         updated_at=ensure_utc(model.updated_at) or datetime.now(timezone.utc),
     )
@@ -49,6 +60,9 @@ def _apply_entity(model: TransactionModel, entity: Transaction) -> None:
     model.currency = entity.currency
     model.goal_id = entity.goal_id
     model.debt_id = entity.debt_id
+    model.subscription_id = entity.subscription_id
+    model.goal_credit_amount = entity.goal_credit_amount
+    model.debt_credit_amount = entity.debt_credit_amount
     model.created_at = ensure_utc(entity.created_at) or datetime.now(timezone.utc)
     model.updated_at = ensure_utc(entity.updated_at) or datetime.now(timezone.utc)
 
@@ -81,6 +95,9 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
         date_to: Optional[datetime] = None,
         tags: Optional[Sequence[str]] = None,
         goal_id: Optional[str] = None,
+        debt_id: Optional[str] = None,
+        subscription_id: Optional[str] = None,
+        has_subscription: Optional[bool] = None,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> list[Transaction]:
@@ -93,6 +110,9 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
             date_to,
             list(tags) if tags is not None else None,
             goal_id,
+            debt_id,
+            subscription_id,
+            has_subscription,
             limit,
             offset,
         )
@@ -141,6 +161,9 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
         date_to: Optional[datetime],
         tags: Optional[list[str]],
         goal_id: Optional[str],
+        debt_id: Optional[str],
+        subscription_id: Optional[str],
+        has_subscription: Optional[bool],
         limit: Optional[int],
         offset: int,
     ) -> list[Transaction]:
@@ -163,6 +186,14 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
                 stmt = stmt.where(TransactionModel.date <= ensure_utc(date_to))
             if goal_id is not None:
                 stmt = stmt.where(TransactionModel.goal_id == goal_id)
+            if debt_id is not None:
+                stmt = stmt.where(TransactionModel.debt_id == debt_id)
+            if subscription_id is not None:
+                stmt = stmt.where(TransactionModel.subscription_id == subscription_id)
+            if has_subscription is True:
+                stmt = stmt.where(TransactionModel.subscription_id.is_not(None))
+            elif has_subscription is False:
+                stmt = stmt.where(TransactionModel.subscription_id.is_(None))
             stmt = stmt.order_by(TransactionModel.date.desc())
             if offset:
                 stmt = stmt.offset(offset)

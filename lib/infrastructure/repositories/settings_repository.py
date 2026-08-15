@@ -36,6 +36,10 @@ def _to_entity(model: SettingsModel) -> AppSettings:
         goal_milestones=model.goal_milestones,
         low_balance_threshold=threshold,
         reminder_time=getattr(model, "reminder_time", None) or "09:00",
+        reminder_days=int(getattr(model, "reminder_days", None) or 3),
+        check_balance_before_subscription=bool(
+            getattr(model, "check_balance_before_subscription", True)
+        ),
         biometric_enabled=bool(getattr(model, "biometric_enabled", False)),
         updated_at=ensure_utc(model.updated_at) or datetime.now(timezone.utc),
     )
@@ -53,6 +57,10 @@ def _apply_entity(model: SettingsModel, entity: AppSettings) -> None:
     model.goal_milestones = entity.goal_milestones
     model.low_balance_threshold = entity.low_balance_threshold
     model.reminder_time = entity.reminder_time
+    model.reminder_days = int(entity.reminder_days or 3)
+    model.check_balance_before_subscription = bool(
+        entity.check_balance_before_subscription
+    )
     model.biometric_enabled = entity.biometric_enabled
     model.updated_at = ensure_utc(entity.updated_at) or datetime.now(timezone.utc)
 

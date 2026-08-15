@@ -21,6 +21,7 @@ class DebtCard(ft.Container):
         *,
         language: str = "ru",
         interest_amount: Optional[Decimal] = None,
+        alert: bool = False,
         on_click: Optional[Callable[[Debt], None]] = None,
         on_edit: Optional[Callable[[Debt], None]] = None,
         on_delete: Optional[Callable[[Debt], None]] = None,
@@ -30,10 +31,15 @@ class DebtCard(ft.Container):
 
         i_owe = debt.direction == DebtDirection.I_OWE
         accent = ft.Colors.ERROR if i_owe else ft.Colors.SECONDARY
+        status_value = (
+            debt.status.value
+            if isinstance(debt.status, DebtStatus)
+            else str(debt.status)
+        )
         status_color = (
             ft.Colors.ON_SURFACE_VARIANT
-            if debt.status == DebtStatus.PAID
-            else accent
+            if debt.status in (DebtStatus.PAID, DebtStatus.ARCHIVED)
+            else (ft.Colors.ERROR if debt.status == DebtStatus.OVERDUE else accent)
         )
         interest_line: list[ft.Control] = []
         if debt.interest_rate is not None:
@@ -58,7 +64,11 @@ class DebtCard(ft.Container):
                 on_click=lambda _e: on_delete(debt) if on_delete else None,
             ),
         ]
-        if on_repay is not None and debt.status != DebtStatus.PAID:
+        can_repay = (
+            on_repay is not None
+            and debt.status in (DebtStatus.ACTIVE, DebtStatus.OVERDUE)
+        )
+        if can_repay:
             menu_items.insert(
                 0,
                 ft.PopupMenuItem(
@@ -79,7 +89,22 @@ class DebtCard(ft.Container):
                 items=menu_items,
             )
         ]
-        if on_repay is not None and debt.status != DebtStatus.PAID:
+        if alert:
+            actions_row.insert(
+                0,
+                ft.IconButton(
+                    icon=ft.Icons.PRIORITY_HIGH,
+                    icon_color=ft.Colors.ON_ERROR,
+                    bgcolor=ft.Colors.ERROR,
+                    tooltip=tr("notify.debt_due", language),
+                    on_click=lambda _e: on_repay(debt) if can_repay else None,
+                    style=ft.ButtonStyle(
+                        shape=ft.CircleBorder(),
+                        padding=10,
+                    ),
+                ),
+            )
+        elif can_repay:
             actions_row.insert(
                 0,
                 ft.IconButton(
@@ -99,7 +124,12 @@ class DebtCard(ft.Container):
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text(debt.counterparty, weight=ft.FontWeight.W_700, size=16, expand=True),
+                        ft.Text(
+                            debt.counterparty,
+                            weight=ft.FontWeight.W_700,
+                            size=16,
+                            expand=True,
+                        ),
                         ft.Row(tight=True, controls=actions_row),
                     ],
                 ),
@@ -116,11 +146,7 @@ class DebtCard(ft.Container):
                             else tr("debt.owed_to_me", language)
                         )
                         + " · "
-                        + (
-                            tr("debt.status.paid", language)
-                            if debt.status == DebtStatus.PAID
-                            else tr("debt.status.active", language)
-                        ),
+                        + tr(f"debt.status.{status_value}", language),
                         size=11,
                         weight=ft.FontWeight.W_600,
                         color=status_color,

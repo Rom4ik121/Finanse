@@ -134,4 +134,34 @@ class HttpExchangeRateProvider:
                     updated_at=now,
                 )
             )
+
+        # Also persist USD-anchored rows so pairs like BTC/USD convert even
+        # when the app base is a weak fiat (UZS) that underflows vs crypto.
+        if base_code != "USD":
+            seen = {(r.base, r.quote) for r in results}
+            for code, usd_price in usd_per_unit.items():
+                if code == "USD" or usd_price is None or usd_price <= 0:
+                    continue
+                is_crypto = code in self._crypto_codes
+                usd_to_code = Decimal("1") / usd_price
+                code_to_usd = usd_price
+                for pair_base, pair_quote, pair_rate in (
+                    ("USD", code, usd_to_code),
+                    (code, "USD", code_to_usd),
+                ):
+                    key = (pair_base, pair_quote)
+                    if key in seen:
+                        continue
+                    quantized = quantize_rate(pair_rate, crypto=is_crypto)
+                    if quantized <= 0:
+                        continue
+                    seen.add(key)
+                    results.append(
+                        ExchangeRate(
+                            base=pair_base,
+                            quote=pair_quote,
+                            rate=quantized,
+                            updated_at=now,
+                        )
+                    )
         return results

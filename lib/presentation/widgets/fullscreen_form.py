@@ -34,11 +34,13 @@ def open_fullscreen_form(
     title: str,
     lang: str,
     body: Sequence[ft.Control],
-    on_save: SaveFn,
+    on_save: SaveFn | None = None,
     overlay_key: str = "fullscreen_form",
     save_icon: ft.IconData = ft.Icons.CHECK,
+    save_label: str | None = None,
+    show_save: bool = True,
 ) -> CloseFn:
-    """Show a full-screen form with close + save in the header.
+    """Show a full-screen form with close + optional save in the header.
 
     Returns a ``close`` callback the caller can invoke after a successful save.
     """
@@ -48,7 +50,18 @@ def open_fullscreen_form(
         dismiss_fullscreen(page, key=overlay_key)
 
     async def _save_click(_e: ft.ControlEvent | None = None) -> None:
-        await on_save()
+        if on_save is not None:
+            await on_save()
+
+    actions: list[ft.Control] = []
+    if show_save and on_save is not None:
+        actions.append(
+            ft.FilledButton(
+                save_label or tr("action.save", lang),
+                icon=save_icon,
+                on_click=lambda e: run_async(page, _save_click, e),
+            )
+        )
 
     overlay = ft.Container(
         left=0,
@@ -71,13 +84,7 @@ def open_fullscreen_form(
                             tooltip=tr("action.cancel", lang),
                             on_click=lambda _e: _close(),
                         ),
-                        actions=[
-                            ft.FilledButton(
-                                tr("action.save", lang),
-                                icon=save_icon,
-                                on_click=lambda e: run_async(page, _save_click, e),
-                            ),
-                        ],
+                        actions=actions,
                     ),
                     ft.Container(
                         expand=True,

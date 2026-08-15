@@ -30,10 +30,15 @@ from lib.domain.use_cases.goals import (
 )
 from lib.domain.use_cases.settings import GetSettingsUseCase, UpdateSettingsUseCase
 from lib.domain.use_cases.subscriptions import (
+    ChargeSubscriptionNowUseCase,
     CreateSubscriptionUseCase,
+    DeleteSubscriptionChargeUseCase,
     DeleteSubscriptionUseCase,
+    GetSubscriptionAnalyticsUseCase,
     ListSubscriptionsUseCase,
+    PauseSubscriptionUseCase,
     ProcessDueSubscriptionsUseCase,
+    ResumeSubscriptionUseCase,
     UpdateSubscriptionUseCase,
 )
 from lib.domain.use_cases.transactions import (
@@ -71,6 +76,11 @@ __all__ = [
     "DeleteSubscriptionUseCase",
     "ListSubscriptionsUseCase",
     "ProcessDueSubscriptionsUseCase",
+    "PauseSubscriptionUseCase",
+    "ResumeSubscriptionUseCase",
+    "ChargeSubscriptionNowUseCase",
+    "DeleteSubscriptionChargeUseCase",
+    "GetSubscriptionAnalyticsUseCase",
     "UpdateExchangeRatesUseCase",
     "ConvertCurrencyUseCase",
     "ListCurrenciesUseCase",

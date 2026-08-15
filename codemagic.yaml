@@ -53,6 +53,8 @@ workflows:
             --ios-team-id "$APPLE_TEAM_ID" \
             --ios-export-method release-testing \
             --ios-signing-certificate "Apple Distribution" \
+            --splash-color "#000000" \
+            --splash-dark-color "#000000" \
             --yes \
             --no-rich-output \
             --verbose
@@ -85,8 +87,8 @@ workflows:
         script: |
           set -e
           # If this fails on binary wheels, fix deps before spending signed-build minutes.
-          flet build ipa --org com.finanse.app --product FinWise --yes --no-rich-output --verbose || \
-          flet build ios-simulator --org com.finanse.app --product FinWise --yes --no-rich-output --verbose
+          flet build ipa --org com.finanse.app --product FinWise --splash-color "#000000" --splash-dark-color "#000000" --yes --no-rich-output --verbose || \
+          flet build ios-simulator --org com.finanse.app --product FinWise --splash-color "#000000" --splash-dark-color "#000000" --yes --no-rich-output --verbose
     artifacts:
       - build/**/*.ipa
       - build/**/*.app

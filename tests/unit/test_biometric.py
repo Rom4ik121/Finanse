@@ -9,9 +9,11 @@ from lib.infrastructure.services.biometric import (
     BiometricResult,
     BiometricStatus,
     biometric_env_override_ok,
+    is_mobile_platform,
     mobile_runtime,
     platform_supports_biometrics,
     probe_biometric_status,
+    register_local_auth_service,
     request_biometric_verification,
     set_local_auth_service,
     status_is_usable,
@@ -103,3 +105,26 @@ def test_mobile_cancel_maps(monkeypatch) -> None:
 def test_status_is_usable() -> None:
     assert status_is_usable(BiometricStatus.AVAILABLE) is True
     assert status_is_usable(BiometricStatus.UNSUPPORTED) is False
+
+
+def test_probe_uses_registered_service_without_flet_platform(monkeypatch) -> None:
+    monkeypatch.delenv("FLET_PLATFORM", raising=False)
+    set_local_auth_service(_FakeLocalAuth())
+
+    async def _run() -> None:
+        assert await probe_biometric_status() is BiometricStatus.AVAILABLE
+
+    asyncio.run(_run())
+    set_local_auth_service(None)
+
+
+class _FakePage:
+    platform = "android"
+
+
+def test_is_mobile_platform_from_page() -> None:
+    from flet import PagePlatform
+
+    page = _FakePage()
+    page.platform = PagePlatform.ANDROID
+    assert is_mobile_platform(page) is True

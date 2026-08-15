@@ -1,0 +1,40 @@
+// Enable core library desugaring for the Flutter :app module.
+// Required by flutter_local_notifications (flet-android-notifications).
+// Applied via GRADLE_USER_HOME/init.d during Flet APK builds.
+
+def enableDesugar(project) {
+    def android = project.extensions.findByName("android")
+    if (android == null) {
+        return
+    }
+    if (!project.plugins.hasPlugin("com.android.application")) {
+        return
+    }
+    try {
+        android.compileOptions.coreLibraryDesugaringEnabled = true
+    } catch (Throwable ignored) {
+        // Older AGP API variants
+    }
+    try {
+        android.defaultConfig.multiDexEnabled = true
+    } catch (Throwable ignored) {
+    }
+    def configs = project.configurations
+    def already = configs.findByName("coreLibraryDesugaring")?.dependencies?.any {
+        it.name == "desugar_jdk_libs"
+    }
+    if (!already) {
+        project.dependencies.add(
+            "coreLibraryDesugaring",
+            "com.android.tools:desugar_jdk_libs:2.1.4"
+        )
+    }
+}
+
+gradle.projectsLoaded {
+    rootProject.allprojects { project ->
+        project.afterEvaluate {
+            enableDesugar(project)
+        }
+    }
+}

@@ -204,13 +204,13 @@ class CryptoRateClient:
             response.raise_for_status()
             payload = response.json()
         except httpx.TimeoutException as exc:
-            logger.error("CoinGecko request timed out")
+            logger.warning("CoinGecko request timed out")
             raise CryptoRateClientError("Timeout fetching crypto prices") from exc
         except httpx.HTTPError as exc:
-            logger.exception("CoinGecko HTTP error")
+            logger.warning("CoinGecko HTTP error: %s", exc)
             raise CryptoRateClientError("HTTP error fetching crypto prices") from exc
         except ValueError as exc:
-            logger.exception("Invalid JSON from CoinGecko")
+            logger.warning("Invalid JSON from CoinGecko: %s", exc)
             raise CryptoRateClientError("Invalid JSON from CoinGecko") from exc
 
         if not isinstance(payload, dict):
