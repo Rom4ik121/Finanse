@@ -104,3 +104,9 @@ def test_charts_native_fallback(monkeypatch) -> None:
         language="ru",
     )
     assert isinstance(line, ft.Container)
+
+
+def test_budgets_page_importable() -> None:
+    from lib.presentation.pages.budgets import BudgetsPage
+
+    assert BudgetsPage is not None

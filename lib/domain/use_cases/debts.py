@@ -46,6 +46,38 @@ def _add_months(dt: datetime, months: float) -> datetime:
     return dt + timedelta(days=months * 30.4375)
 
 
+def _pace_divisor_months(
+    now: datetime,
+    lookback_months: int,
+    started_at: Optional[datetime],
+) -> Decimal:
+    """Months to average over: observed life in the lookback window, at least 1."""
+    lookback_start = now - timedelta(days=lookback_months * 30.4375)
+    window_start = lookback_start
+    if started_at is not None:
+        start = started_at
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if start > window_start:
+            window_start = start
+    observed = _months_between(window_start, now)
+    capped = min(float(lookback_months), max(observed, 1.0))
+    return Decimal(str(capped))
+
+
+def _monthly_interest(debt: Debt) -> Decimal:
+    """Simple monthly interest on remaining principal (annual percent / 12)."""
+    if debt.interest_rate is None:
+        return Decimal("0.00")
+    remaining = quantize_money(max(Decimal("0"), debt.remaining_amount))
+    return quantize_money(
+        remaining
+        * Decimal(str(debt.interest_rate))
+        / Decimal("100")
+        / Decimal("12")
+    )
+
+
 def debt_credit_amount(transaction: Transaction) -> Decimal:
     """Amount applied to debt remaining (debt currency)."""
     if transaction.debt_credit_amount is not None:
@@ -373,51 +405,44 @@ class GetDebtProjectionUseCase:
             projection.is_on_track = True
             return projection
 
+        monthly_interest = _monthly_interest(debt)
         if debt.due_date is not None:
             months_left = _months_between(now, debt.due_date)
             if months_left <= 0:
                 projection.recommended_monthly_payment = remaining
-                projection.is_on_track = False
             else:
                 projection.recommended_monthly_payment = quantize_money(
-                    remaining / Decimal(str(months_left))
+                    remaining / Decimal(str(months_left)) + monthly_interest
                 )
 
-        lookback_start = now - timedelta(days=int(self._lookback_months * 30.4375))
+        lookback_start = now - timedelta(days=self._lookback_months * 30.4375)
         txs = await self._transactions.list(debt_id=debt.id, date_from=lookback_start)
         total_paid = sum((debt_credit_amount(tx) for tx in txs), Decimal("0"))
-        avg = quantize_money(
-            total_paid / Decimal(str(self._lookback_months))
-            if self._lookback_months
-            else Decimal("0")
+        divisor = _pace_divisor_months(
+            now,
+            self._lookback_months,
+            debt.started_at or debt.created_at,
         )
+        avg = quantize_money(total_paid / divisor)
         projection.average_monthly_payment = avg
 
-        if avg > 0:
-            months_needed = float(remaining / avg)
+        principal_pace = avg - monthly_interest
+        if principal_pace > 0:
+            months_needed = float(remaining / principal_pace)
             projection.projected_payoff_date = _add_months(now, months_needed)
-        elif debt.due_date is not None:
-            projection.projected_payoff_date = debt.due_date
         else:
             projection.projected_payoff_date = None
 
-        if debt.due_date is not None:
-            if projection.projected_payoff_date is None:
-                projection.is_on_track = False
-            else:
-                projection.is_on_track = (
-                    projection.projected_payoff_date <= debt.due_date
-                )
-            created = debt.started_at or debt.created_at or now
-            total_span = _months_between(created, debt.due_date)
-            elapsed = _months_between(created, now)
-            if total_span > 0:
-                expected_paid = quantize_money(
-                    debt.amount * (Decimal(str(elapsed)) / Decimal(str(total_span)))
-                )
-                paid_so_far = quantize_money(debt.amount - remaining)
-                if paid_so_far + Decimal("0.01") < expected_paid:
-                    projection.is_on_track = False
+        if debt.due_date is None:
+            projection.is_on_track = None
+        elif _months_between(now, debt.due_date) <= 0:
+            projection.is_on_track = False
+        elif projection.projected_payoff_date is None:
+            projection.is_on_track = False
+        else:
+            projection.is_on_track = (
+                projection.projected_payoff_date <= debt.due_date
+            )
 
         return projection
 

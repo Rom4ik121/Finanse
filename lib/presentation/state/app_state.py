@@ -40,6 +40,7 @@ class AppState:
         self.debts_token: int = 0
         self.subscriptions_token: int = 0
         self.analytics_token: int = 0
+        self.budgets_token: int = 0
         self.is_loading: bool = False
         self.is_unlocked: bool = True
         self.pending_notifications: list[str] = []
@@ -98,7 +99,7 @@ class AppState:
         Args:
             scopes: Optional scopes such as ``dashboard``, ``transactions``,
                 ``accounts``, ``goals``, ``debts``, ``subscriptions``,
-                ``analytics``. Empty means global refresh of primary tabs.
+                ``analytics``, ``budgets``. Empty means global refresh of primary tabs.
         """
         self.refresh_token += 1
         if not scopes:
@@ -109,6 +110,7 @@ class AppState:
             self.debts_token += 1
             self.subscriptions_token += 1
             self.analytics_token += 1
+            self.budgets_token += 1
         else:
             if "dashboard" in scopes:
                 self.dashboard_token += 1
@@ -124,6 +126,8 @@ class AppState:
                 self.subscriptions_token += 1
             if "analytics" in scopes:
                 self.analytics_token += 1
+            if "budgets" in scopes:
+                self.budgets_token += 1
         self.notify(coalesce=True)
 
     # ------------------------------------------------------------------

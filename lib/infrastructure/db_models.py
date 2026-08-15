@@ -11,6 +11,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -301,6 +302,44 @@ class SettingsModel(Base):
     pin_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     pin_salt: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     biometric_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    budget_alerts: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utc_now,
+        onupdate=_utc_now,
+    )
+
+
+class BudgetModel(Base):
+    """Persisted monthly spending limit per category."""
+
+    __tablename__ = "budgets"
+    __table_args__ = (
+        UniqueConstraint(
+            "category_id", "month", "year", name="uq_budgets_category_month"
+        ),
+        Index("ix_budgets_month_year", "month", "year"),
+        Index("ix_budgets_category_month", "category_id", "month", "year"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    category_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("categories.name", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    month: Mapped[int] = mapped_column(Integer, nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_limit: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    spent: Mapped[Decimal] = mapped_column(
+        Numeric(18, 2), nullable=False, default=Decimal("0.00")
+    )
+    last_alert_level: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

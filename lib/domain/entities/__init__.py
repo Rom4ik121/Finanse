@@ -1,5 +1,6 @@
 """Domain entity exports."""
 
+from lib.domain.entities.budget import Budget, BudgetProgress
 from lib.domain.entities.account import Account
 from lib.domain.entities.currency import Currency, ExchangeRate
 from lib.domain.entities.debt import Debt, DebtDirection, DebtStatus
@@ -12,6 +13,8 @@ from lib.domain.entities.transaction import Transaction, TransactionType
 __all__ = [
     "Account",
     "AppSettings",
+    "Budget",
+    "BudgetProgress",
     "Currency",
     "Debt",
     "DebtDirection",

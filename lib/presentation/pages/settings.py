@@ -217,6 +217,10 @@ class SettingsPage(ft.Column):
             label=tr("settings.goal_milestones", lang),
             value=s.goal_milestones,
         )
+        self._budget_alerts = ft.Switch(
+            label=tr("settings.budget_alerts", lang),
+            value=bool(getattr(s, "budget_alerts", True)),
+        )
         self._biometric = ft.Switch(
             label=tr("settings.biometric", lang),
             value=s.biometric_enabled,
@@ -279,6 +283,7 @@ class SettingsPage(ft.Column):
                         self._sub_reminders,
                         self._check_balance_sub,
                         self._goal_milestones,
+                        self._budget_alerts,
                         self._reminder_time,
                         self._reminder_days,
                     ],
@@ -350,6 +355,14 @@ class SettingsPage(ft.Column):
                                     style=btn_style,
                                     on_click=lambda _e: state.open_secondary(
                                         "currencies"
+                                    ),
+                                ),
+                                ft.OutlinedButton(
+                                    tr("nav.budgets", lang),
+                                    icon=ft.Icons.PIE_CHART,
+                                    style=btn_style,
+                                    on_click=lambda _e: state.open_secondary(
+                                        "budgets"
                                     ),
                                 ),
                             ],
@@ -512,6 +525,7 @@ class SettingsPage(ft.Column):
             self._sub_reminders,
             self._check_balance_sub,
             self._goal_milestones,
+            self._budget_alerts,
             self._reminder_time,
             self._reminder_days,
         ]
@@ -534,11 +548,13 @@ class SettingsPage(ft.Column):
                     self._debt_reminders,
                     self._sub_reminders,
                     self._goal_milestones,
+                    self._budget_alerts,
                 )
             ):
                 self._debt_reminders.value = True
                 self._sub_reminders.value = True
                 self._goal_milestones.value = True
+                self._budget_alerts.value = True
             run_async(self._page, request_push_permissions)
         self._sync_notification_controls()
 
@@ -628,6 +644,7 @@ class SettingsPage(ft.Column):
                 subscription_reminders=bool(self._sub_reminders.value),
                 debt_reminders=bool(self._debt_reminders.value),
                 goal_milestones=bool(self._goal_milestones.value),
+                budget_alerts=bool(self._budget_alerts.value),
                 low_balance_threshold=self._state.settings.low_balance_threshold,
                 reminder_time=(self._reminder_time.value or "09:00").strip(),
                 reminder_days=max(0, min(365, reminder_days)),

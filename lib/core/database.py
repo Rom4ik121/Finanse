@@ -139,6 +139,10 @@ def _apply_sqlite_column_patches(engine: Engine) -> None:
             ("reminder_time", "VARCHAR(8) NOT NULL DEFAULT '09:00'"),
             ("reminder_days", "INTEGER NOT NULL DEFAULT 3"),
             ("check_balance_before_subscription", "BOOLEAN NOT NULL DEFAULT 1"),
+            ("budget_alerts", "BOOLEAN NOT NULL DEFAULT 1"),
+        ],
+        "budgets": [
+            ("last_alert_level", "INTEGER NOT NULL DEFAULT 0"),
         ],
         "transactions": [
             ("debt_id", "VARCHAR(36)"),
@@ -226,8 +230,23 @@ def _ensure_sqlite_indexes(engine: Engine) -> None:
         "ON transactions (subscription_id)",
     )
     with engine.begin() as conn:
+        tables = {
+            row[0]
+            for row in conn.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
         for sql in statements:
             conn.exec_driver_sql(sql)
+        if "budgets" in tables:
+            conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_budgets_month_year "
+                "ON budgets (month, year)"
+            )
+            conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_budgets_category_month "
+                "ON budgets (category_id, month, year)"
+            )
 
 
 def reset_engine() -> None:

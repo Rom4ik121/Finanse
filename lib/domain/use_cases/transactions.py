@@ -15,8 +15,10 @@ from lib.domain.entities.goal import GoalStatus
 from lib.domain.entities.money import quantize_money
 from lib.domain.entities.transaction import Transaction, TransactionType
 from lib.domain.repositories.account_repository import AccountRepository
+from lib.domain.repositories.budget_repository import BudgetRepository
 from lib.domain.repositories.debt_repository import DebtRepository
 from lib.domain.repositories.goal_repository import GoalRepository
+from lib.domain.repositories.settings_repository import SettingsRepository
 from lib.domain.repositories.transaction_repository import TransactionRepository
 from lib.domain.use_cases.debts import debt_credit_amount
 from lib.domain.use_cases.goals import goal_credit_amount
@@ -79,6 +81,42 @@ def _is_debt_payment(transaction: Transaction) -> bool:
     return bool(transaction.debt_id)
 
 
+async def _sync_budget_expense(
+    budgets: Optional[BudgetRepository],
+    transaction: Transaction,
+    *,
+    sign: int,
+    settings_repo: Optional[SettingsRepository] = None,
+    notifications: object = None,
+) -> None:
+    """Apply or reverse an expense against the matching monthly budget."""
+    if budgets is None or transaction.type != TransactionType.EXPENSE:
+        return
+    from lib.domain.use_cases.budgets import apply_expense_delta
+
+    settings = None
+    language = "ru"
+    currency = "RUB"
+    if settings_repo is not None:
+        try:
+            settings = await settings_repo.get()
+            language = settings.language
+            currency = settings.default_currency
+        except Exception:  # noqa: BLE001
+            settings = None
+    await apply_expense_delta(
+        budgets,
+        category=transaction.category,
+        when=transaction.date,
+        amount=transaction.amount,
+        sign=sign,
+        settings=settings,
+        notifications=notifications,  # type: ignore[arg-type]
+        currency=currency,
+        language=language,
+    )
+
+
 class AddTransactionUseCase:
     """Create a transaction and adjust account (and optional goal / debt) balances."""
 
@@ -88,11 +126,17 @@ class AddTransactionUseCase:
         accounts: AccountRepository,
         goals: GoalRepository,
         debts: Optional[DebtRepository] = None,
+        budgets: Optional[BudgetRepository] = None,
+        settings: Optional[SettingsRepository] = None,
+        notifications: object = None,
     ) -> None:
         self._transactions = transactions
         self._accounts = accounts
         self._goals = goals
         self._debts = debts
+        self._budgets = budgets
+        self._settings = settings
+        self._notifications = notifications
 
     async def execute(self, transaction: Transaction) -> Transaction:
         """Persist ``transaction``, update account balance, sync goal/debt if linked."""
@@ -119,6 +163,13 @@ class AddTransactionUseCase:
 
         await self._apply_goal_contribution(created)
         await self._apply_debt_payment(created)
+        await _sync_budget_expense(
+            self._budgets,
+            created,
+            sign=1,
+            settings_repo=self._settings,
+            notifications=self._notifications,
+        )
         return created
 
     async def _apply_goal_contribution(self, transaction: Transaction) -> None:
@@ -151,11 +202,17 @@ class UpdateTransactionUseCase:
         accounts: AccountRepository,
         goals: GoalRepository,
         debts: Optional[DebtRepository] = None,
+        budgets: Optional[BudgetRepository] = None,
+        settings: Optional[SettingsRepository] = None,
+        notifications: object = None,
     ) -> None:
         self._transactions = transactions
         self._accounts = accounts
         self._goals = goals
         self._debts = debts
+        self._budgets = budgets
+        self._settings = settings
+        self._notifications = notifications
 
     async def execute(self, transaction: Transaction) -> Transaction:
         """Replace an existing transaction and fix derived balances."""
@@ -185,6 +242,20 @@ class UpdateTransactionUseCase:
         )
         await self._apply_goal_contribution(saved)
         await self._apply_debt_payment(saved)
+        await _sync_budget_expense(
+            self._budgets,
+            existing,
+            sign=-1,
+            settings_repo=self._settings,
+            notifications=self._notifications,
+        )
+        await _sync_budget_expense(
+            self._budgets,
+            saved,
+            sign=1,
+            settings_repo=self._settings,
+            notifications=self._notifications,
+        )
         return saved
 
     async def _apply_account_delta(self, account_id: str, delta: Decimal) -> None:
@@ -247,11 +318,17 @@ class DeleteTransactionUseCase:
         accounts: AccountRepository,
         goals: GoalRepository,
         debts: Optional[DebtRepository] = None,
+        budgets: Optional[BudgetRepository] = None,
+        settings: Optional[SettingsRepository] = None,
+        notifications: object = None,
     ) -> None:
         self._transactions = transactions
         self._accounts = accounts
         self._goals = goals
         self._debts = debts
+        self._budgets = budgets
+        self._settings = settings
+        self._notifications = notifications
 
     async def execute(self, transaction_id: str) -> bool:
         """Remove a transaction and undo account / goal / debt side effects."""
@@ -283,6 +360,13 @@ class DeleteTransactionUseCase:
                 _mark_debt_remaining(debt, debt.remaining_amount + credit)
                 await self._debts.update(debt)
 
+        await _sync_budget_expense(
+            self._budgets,
+            existing,
+            sign=-1,
+            settings_repo=self._settings,
+            notifications=self._notifications,
+        )
         return await self._transactions.delete(transaction_id)
 
 

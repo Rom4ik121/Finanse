@@ -2,6 +2,7 @@
 
 from lib.presentation.pages.accounts import AccountsPage
 from lib.presentation.pages.analytics import AnalyticsPage
+from lib.presentation.pages.budgets import BudgetsPage
 from lib.presentation.pages.currencies import CurrenciesPage
 from lib.presentation.pages.dashboard import DashboardPage
 from lib.presentation.pages.debts import DebtsPage
@@ -13,6 +14,7 @@ from lib.presentation.pages.transactions import TransactionsPage
 __all__ = [
     "AccountsPage",
     "AnalyticsPage",
+    "BudgetsPage",
     "CurrenciesPage",
     "DashboardPage",
     "DebtsPage",

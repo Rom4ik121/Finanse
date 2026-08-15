@@ -11,6 +11,7 @@ import flet as ft
 from lib.infrastructure.services.encryption_service import EncryptionService
 from lib.presentation.pages.accounts import AccountsPage
 from lib.presentation.pages.analytics import AnalyticsPage
+from lib.presentation.pages.budgets import BudgetsPage
 from lib.presentation.pages.currencies import CurrenciesPage
 from lib.presentation.pages.dashboard import DashboardPage
 from lib.presentation.pages.debts import DebtsPage
@@ -241,6 +242,8 @@ class FinanseApp:
             view = SubscriptionsPage(self.page, self.state)
         elif route == "currencies":
             view = CurrenciesPage(self.page, self.state)
+        elif route == "budgets":
+            view = BudgetsPage(self.page, self.state)
         else:
             return self._primary_page(self.state.selected_tab)
         self._secondary_cache[route] = view

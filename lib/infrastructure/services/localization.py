@@ -361,6 +361,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Sections",
         "uz": "Bo‘limlar",
     },
+    "dashboard.budgets": {
+        "ru": "Бюджеты месяца",
+        "en": "This month's budgets",
+        "uz": "Oy byudjetlari",
+    },
+    "dashboard.budgets_empty": {
+        "ru": "Задайте лимиты по категориям",
+        "en": "Set category spending limits",
+        "uz": "Kategoriyalar uchun limit belgilang",
+    },
     "dashboard.total_balance": {
         "ru": "Общий баланс",
         "en": "Total balance",
@@ -590,6 +600,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "ru": "Целей пока нет",
         "en": "No goals yet",
         "uz": "Hali maqsadlar yo‘q",
+    },
+    "empty.budgets": {
+        "ru": "Нет бюджетов на этот месяц",
+        "en": "No budgets for this month",
+        "uz": "Bu oy uchun byudjetlar yo‘q",
     },
     "empty.subscriptions": {
         "ru": "Подписок пока нет",
@@ -1236,6 +1251,118 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Transactions",
         "uz": "Amaliyotlar",
     },
+    "nav.budgets": {
+        "ru": "Бюджеты",
+        "en": "Budgets",
+        "uz": "Byudjetlar",
+    },
+    "budgets.title": {
+        "ru": "Бюджеты",
+        "en": "Budgets",
+        "uz": "Byudjetlar",
+    },
+    "budgets.add": {
+        "ru": "Добавить бюджет",
+        "en": "Add budget",
+        "uz": "Byudjet qo‘shish",
+    },
+    "budgets.edit": {
+        "ru": "Редактировать",
+        "en": "Edit",
+        "uz": "Tahrirlash",
+    },
+    "budgets.delete": {
+        "ru": "Удалить",
+        "en": "Delete",
+        "uz": "O‘chirish",
+    },
+    "budgets.delete_confirm": {
+        "ru": "Удалить бюджет категории «{category}»?",
+        "en": "Delete the budget for \"{category}\"?",
+        "uz": "\"{category}\" byudjetini o‘chirasizmi?",
+    },
+    "budgets.deleted": {
+        "ru": "Бюджет удалён",
+        "en": "Budget deleted",
+        "uz": "Byudjet o‘chirildi",
+    },
+    "budgets.saved": {
+        "ru": "Бюджет сохранён",
+        "en": "Budget saved",
+        "uz": "Byudjet saqlandi",
+    },
+    "budgets.limit": {
+        "ru": "Лимит",
+        "en": "Limit",
+        "uz": "Limit",
+    },
+    "budgets.spent": {
+        "ru": "Потрачено",
+        "en": "Spent",
+        "uz": "Sarflandi",
+    },
+    "budgets.total_limit": {
+        "ru": "Всего лимит",
+        "en": "Total limit",
+        "uz": "Jami limit",
+    },
+    "budgets.total_spent": {
+        "ru": "Всего потрачено",
+        "en": "Total spent",
+        "uz": "Jami sarflandi",
+    },
+    "budgets.remaining": {
+        "ru": "Осталось",
+        "en": "Remaining",
+        "uz": "Qoldi",
+    },
+    "budgets.percent": {
+        "ru": "Использовано",
+        "en": "Used",
+        "uz": "Ishlatildi",
+    },
+    "budgets.over_budget": {
+        "ru": "Превышение",
+        "en": "Over budget",
+        "uz": "Limitdan oshdi",
+    },
+    "budgets.no_budgets": {
+        "ru": "Нет бюджетов на этот месяц",
+        "en": "No budgets for this month",
+        "uz": "Bu oy uchun byudjetlar yo‘q",
+    },
+    "budgets.category_required": {
+        "ru": "Выберите категорию",
+        "en": "Choose a category",
+        "uz": "Kategoriyani tanlang",
+    },
+    "budgets.limit_required": {
+        "ru": "Введите лимит",
+        "en": "Enter a limit",
+        "uz": "Limitni kiriting",
+    },
+    "budgets.month": {
+        "ru": "Месяц",
+        "en": "Month",
+        "uz": "Oy",
+    },
+    "budgets.year": {
+        "ru": "Год",
+        "en": "Year",
+        "uz": "Yil",
+    },
+    "budgets.month.1": {"ru": "Январь", "en": "January", "uz": "Yanvar"},
+    "budgets.month.2": {"ru": "Февраль", "en": "February", "uz": "Fevral"},
+    "budgets.month.3": {"ru": "Март", "en": "March", "uz": "Mart"},
+    "budgets.month.4": {"ru": "Апрель", "en": "April", "uz": "Aprel"},
+    "budgets.month.5": {"ru": "Май", "en": "May", "uz": "May"},
+    "budgets.month.6": {"ru": "Июнь", "en": "June", "uz": "Iyun"},
+    "budgets.month.7": {"ru": "Июль", "en": "July", "uz": "Iyul"},
+    "budgets.month.8": {"ru": "Август", "en": "August", "uz": "Avgust"},
+    "budgets.month.9": {"ru": "Сентябрь", "en": "September", "uz": "Sentabr"},
+    "budgets.month.10": {"ru": "Октябрь", "en": "October", "uz": "Oktabr"},
+    "budgets.month.11": {"ru": "Ноябрь", "en": "November", "uz": "Noyabr"},
+    "budgets.month.12": {"ru": "Декабрь", "en": "December", "uz": "Dekabr"},
     "none": {
         "ru": "Нет",
         "en": "None",
@@ -1280,6 +1407,26 @@ STRINGS: dict[str, dict[str, str]] = {
         "ru": "Цель \"{name}\" отстаёт от графика. Требуется вносить по {amount} в месяц",
         "en": "Goal \"{name}\" is behind schedule. Contribute about {amount} per month",
         "uz": "\"{name}\" maqsadi jadvaldan orqada. Oyiga taxminan {amount} kerak",
+    },
+    "notify.budget_80_title": {
+        "ru": "Бюджет почти исчерпан",
+        "en": "Budget nearly used up",
+        "uz": "Byudjet deyarli tugadi",
+    },
+    "notify.budget_100_title": {
+        "ru": "Бюджет превышен",
+        "en": "Budget exceeded",
+        "uz": "Byudjet oshib ketdi",
+    },
+    "notifications.budget_80": {
+        "ru": "Бюджет категории {category} израсходован на 80%. Осталось: {remaining} {currency}",
+        "en": "Budget for \"{category}\" is 80% used. Remaining: {remaining} {currency}",
+        "uz": "\"{category}\" byudjeti 80% ishlatildi. Qoldi: {remaining} {currency}",
+    },
+    "notifications.budget_100": {
+        "ru": "Бюджет категории {category} превышен! Потрачено: {spent} из {limit} {currency}",
+        "en": "Budget for \"{category}\" exceeded! Spent {spent} of {limit} {currency}",
+        "uz": "\"{category}\" byudjeti oshib ketdi! Sarflandi: {spent} / {limit} {currency}",
     },
     "notify.subscription_due": {
         "ru": "Скоро списание подписки",
@@ -1455,6 +1602,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "ru": "Уведомления о целях",
         "en": "Goal milestone alerts",
         "uz": "Maqsad haqida bildirishnomalar",
+    },
+    "settings.budget_alerts": {
+        "ru": "Уведомления о бюджетах",
+        "en": "Budget alerts",
+        "uz": "Byudjet bildirishnomalari",
     },
     "settings.debt_reminders": {
         "ru": "Напоминания о долгах",

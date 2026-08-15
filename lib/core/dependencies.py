@@ -37,6 +37,7 @@ class Container:
     currency_repository: Any = None
     category_repository: Any = None
     settings_repository: Any = None
+    budget_repository: Any = None
 
     # Optional infrastructure services
     exchange_rate_provider: Any = None
@@ -106,6 +107,11 @@ class Container:
     update_category: Any = None
     delete_category: Any = None
     find_or_create_category: Any = None
+    set_budget: Any = None
+    delete_budget: Any = None
+    get_budget_progress: Any = None
+    get_budgets_for_month: Any = None
+    recalculate_budget_spent: Any = None
 
     missing: list[str] = field(default_factory=list)
     errors: dict[str, str] = field(default_factory=dict)
@@ -133,6 +139,7 @@ class Container:
             "currency_repository",
             "category_repository",
             "settings_repository",
+            "budget_repository",
         ):
             repo = getattr(self, attr, None)
             if repo is not None and hasattr(repo, "_session_factory"):
@@ -257,6 +264,11 @@ def build_container(
             "lib.infrastructure.repositories.category_repository",
             "SqlAlchemyCategoryRepository",
         ),
+        (
+            "budget_repository",
+            "lib.infrastructure.repositories.budget_repository",
+            "SqlAlchemyBudgetRepository",
+        ),
     ]
     for attr, module_path, class_name in repo_specs:
         _construct(container, attr, module_path, class_name, session_factory)
@@ -332,6 +344,13 @@ def build_container(
         ListGoalsUseCase,
         UpdateGoalUseCase,
     )
+    from lib.domain.use_cases.budgets import (
+        DeleteBudgetUseCase,
+        GetBudgetProgressUseCase,
+        GetBudgetsForMonthUseCase,
+        RecalculateBudgetSpentUseCase,
+        SetBudgetUseCase,
+    )
     from lib.domain.use_cases.categories import (
         CreateCategoryUseCase,
         DeleteCategoryUseCase,
@@ -375,30 +394,39 @@ def build_container(
             container.missing.append(attr)
             container.errors[attr] = f"construct failed: {exc}"
 
-    _wire(
-        "add_transaction",
-        AddTransactionUseCase,
-        "transaction_repository",
-        "account_repository",
-        "goal_repository",
-        "debt_repository",
-    )
-    _wire(
-        "update_transaction",
-        UpdateTransactionUseCase,
-        "transaction_repository",
-        "account_repository",
-        "goal_repository",
-        "debt_repository",
-    )
-    _wire(
-        "delete_transaction",
-        DeleteTransactionUseCase,
-        "transaction_repository",
-        "account_repository",
-        "goal_repository",
-        "debt_repository",
-    )
+    def _wire_transaction(attr: str, factory: Any) -> None:
+        required = (
+            "transaction_repository",
+            "account_repository",
+            "goal_repository",
+            "debt_repository",
+        )
+        values = []
+        for dep in required:
+            value = getattr(container, dep)
+            if value is None:
+                container.missing.append(attr)
+                container.errors[attr] = f"missing dependency: {dep}"
+                return
+            values.append(value)
+        try:
+            setattr(
+                container,
+                attr,
+                factory(
+                    *values,
+                    budgets=container.budget_repository,
+                    settings=container.settings_repository,
+                    notifications=container.notification_service,
+                ),
+            )
+        except Exception as exc:  # pragma: no cover
+            container.missing.append(attr)
+            container.errors[attr] = f"construct failed: {exc}"
+
+    _wire_transaction("add_transaction", AddTransactionUseCase)
+    _wire_transaction("update_transaction", UpdateTransactionUseCase)
+    _wire_transaction("delete_transaction", DeleteTransactionUseCase)
     _wire("list_transactions", ListTransactionsUseCase, "transaction_repository")
     _wire(
         "get_transaction_stats",
@@ -542,12 +570,34 @@ def build_container(
 
     _wire("list_categories", ListCategoriesUseCase, "category_repository")
     _wire("create_category", CreateCategoryUseCase, "category_repository")
-    _wire("update_category", UpdateCategoryUseCase, "category_repository")
-    _wire("delete_category", DeleteCategoryUseCase, "category_repository")
+    if container.category_repository is not None:
+        container.update_category = UpdateCategoryUseCase(
+            container.category_repository,
+            budgets=container.budget_repository,
+        )
+        container.delete_category = DeleteCategoryUseCase(
+            container.category_repository,
+            budgets=container.budget_repository,
+        )
+    else:
+        for name in ("update_category", "delete_category"):
+            container.missing.append(name)
+            container.errors[name] = "missing dependency: category_repository"
     _wire(
         "find_or_create_category",
         FindOrCreateCategoryUseCase,
         "category_repository",
+    )
+
+    _wire("set_budget", SetBudgetUseCase, "budget_repository", "category_repository", "transaction_repository")
+    _wire("delete_budget", DeleteBudgetUseCase, "budget_repository")
+    _wire("get_budget_progress", GetBudgetProgressUseCase, "budget_repository")
+    _wire("get_budgets_for_month", GetBudgetsForMonthUseCase, "budget_repository")
+    _wire(
+        "recalculate_budget_spent",
+        RecalculateBudgetSpentUseCase,
+        "budget_repository",
+        "transaction_repository",
     )
 
     _wire(

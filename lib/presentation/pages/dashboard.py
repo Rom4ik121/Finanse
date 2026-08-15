@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -10,12 +11,14 @@ import flet as ft
 from lib.domain.entities.currency_codes import normalize_currency_code
 from lib.domain.entities.transaction import TransactionType
 from lib.presentation.notification_badges import (
+    BUDGET_ALERT_KINDS,
     DEBT_ALERT_KINDS,
     GOAL_ALERT_KINDS,
     SUBSCRIPTION_ALERT_KINDS,
     pending_count,
 )
 from lib.presentation.styles import (
+    card_surface,
     page_header,
     section_title,
     shortcut_chip,
@@ -28,6 +31,7 @@ from lib.presentation.utils import (
     snack,
     tr,
 )
+from lib.infrastructure.services.localization import localize_category_name
 from lib.presentation.widgets.dual_add_button import dual_add_button
 from lib.presentation.widgets.empty_state import EmptyState
 from lib.presentation.widgets.loading import loading_indicator
@@ -176,6 +180,8 @@ class DashboardPage(ft.Column):
         goals_badge = pending_count(c, settings, GOAL_ALERT_KINDS)
         debts_badge = pending_count(c, settings, DEBT_ALERT_KINDS)
         subs_badge = pending_count(c, settings, SUBSCRIPTION_ALERT_KINDS)
+        budgets_badge = pending_count(c, settings, BUDGET_ALERT_KINDS)
+        budget_widget = await self._budgets_widget(lang, base)
         self._body.controls = [
             SummaryCard(
                 title=tr("dashboard.total_balance", lang),
@@ -242,8 +248,85 @@ class DashboardPage(ft.Column):
                             ),
                         ],
                     ),
+                    ft.Row(
+                        spacing=8,
+                        controls=[
+                            shortcut_chip(
+                                tr("nav.budgets", lang),
+                                ft.Icons.PIE_CHART,
+                                badge=budgets_badge,
+                                on_click=lambda _e: self._state.open_secondary(
+                                    "budgets"
+                                ),
+                            ),
+                        ],
+                    ),
                 ],
             ),
+            budget_widget,
             ft.Container(height=10),
         ]
         safe_update(self._body)
+
+    async def _budgets_widget(self, lang: str, currency: str) -> ft.Control:
+        """Top-3 category budgets by usage for the current month."""
+        now = datetime.now(timezone.utc)
+        uc = getattr(self._state.container, "get_budgets_for_month", None)
+        title = section_title(tr("dashboard.budgets", lang))
+        if uc is None:
+            return ft.Column(tight=True, spacing=8, controls=[title])
+        try:
+            items = await uc.execute(now.month, now.year)
+        except Exception:  # noqa: BLE001
+            items = []
+        top = list(items)[:3]
+        if not top:
+            body: ft.Control = ft.Text(
+                tr("dashboard.budgets_empty", lang),
+                size=13,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            )
+        else:
+            rows: list[ft.Control] = []
+            for progress in top:
+                percent = progress.percent
+                color = ft.Colors.ERROR if percent > 100 else (
+                    ft.Colors.AMBER if percent >= 80 else ft.Colors.GREEN
+                )
+                rows.append(
+                    ft.Column(
+                        spacing=4,
+                        tight=True,
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Text(
+                                        localize_category_name(
+                                            progress.category_id, lang
+                                        ),
+                                        expand=True,
+                                        size=13,
+                                        overflow=ft.TextOverflow.ELLIPSIS,
+                                    ),
+                                    ft.Text(f"{percent:.0f}%", size=13, color=color),
+                                ],
+                            ),
+                            ft.ProgressBar(
+                                value=min(float(percent) / 100.0, 1.0),
+                                color=color,
+                                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+                            ),
+                        ],
+                    )
+                )
+            body = ft.Column(spacing=10, tight=True, controls=rows)
+        return card_surface(
+            ft.Column(
+                spacing=10,
+                tight=True,
+                controls=[title, body],
+            ),
+            ink=True,
+            on_click=lambda _e: self._state.open_secondary("budgets"),
+        )
+

@@ -29,6 +29,8 @@ class NotificationKind(str, Enum):
     SUBSCRIPTION_EXPIRED = "subscription_expired"
     GOAL_MILESTONE = "goal_milestone"
     GOAL_OFF_TRACK = "goal_off_track"
+    BUDGET_WARNING = "budget_warning"
+    BUDGET_OVER = "budget_over"
 
 
 @dataclass(slots=True)

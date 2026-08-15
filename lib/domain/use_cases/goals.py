@@ -50,6 +50,25 @@ def _add_months(dt: datetime, months: float) -> datetime:
     return dt + timedelta(days=months * 30.4375)
 
 
+def _pace_divisor_months(
+    now: datetime,
+    lookback_months: int,
+    started_at: Optional[datetime],
+) -> Decimal:
+    """Months to average over: observed life in the lookback window, at least 1."""
+    lookback_start = now - timedelta(days=lookback_months * 30.4375)
+    window_start = lookback_start
+    if started_at is not None:
+        start = started_at
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if start > window_start:
+            window_start = start
+    observed = _months_between(window_start, now)
+    capped = min(float(lookback_months), max(observed, 1.0))
+    return Decimal(str(capped))
+
+
 def goal_credit_amount(transaction: Transaction) -> Decimal:
     """Amount credited to the goal currency for a contribution transaction."""
     if transaction.goal_credit_amount is not None:
@@ -321,30 +340,25 @@ class GetGoalProjectionUseCase:
             await self._cache(goal, projection)
             return projection
 
-        # Required monthly to hit deadline.
         if goal.deadline is not None:
             months_left = _months_between(now, goal.deadline)
             if months_left <= 0:
                 projection.required_monthly_contribution = remaining
-                projection.is_on_track = False
             else:
                 projection.required_monthly_contribution = quantize_money(
                     remaining / Decimal(str(months_left))
                 )
 
-        # Average contribution pace from recent history.
-        lookback_start = now - timedelta(days=int(self._lookback_months * 30.4375))
+        lookback_start = now - timedelta(days=self._lookback_months * 30.4375)
         txs = await self._transactions.list(goal_id=goal.id, date_from=lookback_start)
         total_credited = sum(
             (goal_credit_amount(tx) for tx in txs if tx.type == TransactionType.EXPENSE),
             Decimal("0"),
         )
-        # Use full lookback window so sparse history doesn't overstate pace.
-        avg = quantize_money(
-            total_credited / Decimal(str(self._lookback_months))
-            if self._lookback_months
-            else Decimal("0")
+        divisor = _pace_divisor_months(
+            now, self._lookback_months, goal.created_at
         )
+        avg = quantize_money(total_credited / divisor)
         projection.average_monthly_contribution = avg
 
         if avg > 0:
@@ -353,24 +367,16 @@ class GetGoalProjectionUseCase:
         else:
             projection.projected_completion_date = None
 
-        if goal.deadline is not None:
-            if projection.projected_completion_date is None:
-                projection.is_on_track = False
-            else:
-                projection.is_on_track = (
-                    projection.projected_completion_date <= goal.deadline
-                )
-            # Also compare against linear expected progress.
-            created = goal.created_at or now
-            total_span = _months_between(created, goal.deadline)
-            elapsed = _months_between(created, now)
-            if total_span > 0:
-                expected = quantize_money(
-                    goal.target_amount
-                    * (Decimal(str(elapsed)) / Decimal(str(total_span)))
-                )
-                if goal.current_amount + Decimal("0.01") < expected:
-                    projection.is_on_track = False
+        if goal.deadline is None:
+            projection.is_on_track = None
+        elif _months_between(now, goal.deadline) <= 0:
+            projection.is_on_track = False
+        elif projection.projected_completion_date is None:
+            projection.is_on_track = False
+        else:
+            projection.is_on_track = (
+                projection.projected_completion_date <= goal.deadline
+            )
 
         await self._cache(goal, projection)
         return projection

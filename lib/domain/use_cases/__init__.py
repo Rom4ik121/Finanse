@@ -7,6 +7,13 @@ from lib.domain.use_cases.accounts import (
     RecalculateAccountBalanceUseCase,
     UpdateAccountUseCase,
 )
+from lib.domain.use_cases.budgets import (
+    DeleteBudgetUseCase,
+    GetBudgetProgressUseCase,
+    GetBudgetsForMonthUseCase,
+    RecalculateBudgetSpentUseCase,
+    SetBudgetUseCase,
+)
 from lib.domain.use_cases.currencies import (
     ConvertCurrencyUseCase,
     ListCurrenciesUseCase,
@@ -60,6 +67,11 @@ __all__ = [
     "DeleteAccountUseCase",
     "ListAccountsUseCase",
     "RecalculateAccountBalanceUseCase",
+    "SetBudgetUseCase",
+    "DeleteBudgetUseCase",
+    "GetBudgetProgressUseCase",
+    "GetBudgetsForMonthUseCase",
+    "RecalculateBudgetSpentUseCase",
     "CreateGoalUseCase",
     "UpdateGoalUseCase",
     "DeleteGoalUseCase",

@@ -23,6 +23,10 @@ SUBSCRIPTION_ALERT_KINDS = (
     NotificationKind.SUBSCRIPTION_SKIPPED,
     NotificationKind.SUBSCRIPTION_EXPIRED,
 )
+BUDGET_ALERT_KINDS = (
+    NotificationKind.BUDGET_WARNING,
+    NotificationKind.BUDGET_OVER,
+)
 
 
 def _kinds_enabled(settings: Any, kinds: Sequence[NotificationKind]) -> list[NotificationKind]:
@@ -49,6 +53,12 @@ def _kinds_enabled(settings: Any, kinds: Sequence[NotificationKind]) -> list[Not
             NotificationKind.SUBSCRIPTION_EXPIRED,
         ):
             if getattr(settings, "subscription_reminders", True):
+                enabled.append(kind)
+        elif kind in (
+            NotificationKind.BUDGET_WARNING,
+            NotificationKind.BUDGET_OVER,
+        ):
+            if getattr(settings, "budget_alerts", True):
                 enabled.append(kind)
     return enabled
 

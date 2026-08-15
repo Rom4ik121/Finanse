@@ -34,6 +34,7 @@ def _to_entity(model: SettingsModel) -> AppSettings:
         subscription_reminders=model.subscription_reminders,
         debt_reminders=model.debt_reminders,
         goal_milestones=model.goal_milestones,
+        budget_alerts=bool(getattr(model, "budget_alerts", True)),
         low_balance_threshold=threshold,
         reminder_time=getattr(model, "reminder_time", None) or "09:00",
         reminder_days=int(getattr(model, "reminder_days", None) or 3),
@@ -55,6 +56,7 @@ def _apply_entity(model: SettingsModel, entity: AppSettings) -> None:
     model.subscription_reminders = entity.subscription_reminders
     model.debt_reminders = entity.debt_reminders
     model.goal_milestones = entity.goal_milestones
+    model.budget_alerts = bool(getattr(entity, "budget_alerts", True))
     model.low_balance_threshold = entity.low_balance_threshold
     model.reminder_time = entity.reminder_time
     model.reminder_days = int(entity.reminder_days or 3)

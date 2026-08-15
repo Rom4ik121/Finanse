@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from lib.domain.entities.category import Category, CategoryKind
+from lib.domain.repositories.budget_repository import BudgetRepository
 from lib.domain.repositories.category_repository import CategoryRepository
 
 
@@ -48,22 +49,40 @@ class CreateCategoryUseCase:
 class UpdateCategoryUseCase:
     """Update category name / icon / color / kind."""
 
-    def __init__(self, categories: CategoryRepository) -> None:
+    def __init__(
+        self,
+        categories: CategoryRepository,
+        budgets: Optional[BudgetRepository] = None,
+    ) -> None:
         self._categories = categories
+        self._budgets = budgets
 
     async def execute(self, category: Category) -> Category:
+        previous = await self._categories.get_by_id(category.id)
         category = category.model_copy(update={"updated_at": _utc_now()})
         clash = await self._categories.get_by_name(category.name)
         if clash is not None and clash.id != category.id:
             raise ValueError(f"Category already exists: {category.name}")
-        return await self._categories.update(category)
+        saved = await self._categories.update(category)
+        if (
+            self._budgets is not None
+            and previous is not None
+            and previous.name != saved.name
+        ):
+            await self._budgets.reassign_category(previous.name, saved.name)
+        return saved
 
 
 class DeleteCategoryUseCase:
     """Delete a non-system category."""
 
-    def __init__(self, categories: CategoryRepository) -> None:
+    def __init__(
+        self,
+        categories: CategoryRepository,
+        budgets: Optional[BudgetRepository] = None,
+    ) -> None:
         self._categories = categories
+        self._budgets = budgets
 
     async def execute(self, category_id: str) -> bool:
         existing = await self._categories.get_by_id(category_id)
@@ -71,6 +90,8 @@ class DeleteCategoryUseCase:
             return False
         if existing.is_system:
             raise ValueError("System categories cannot be deleted")
+        if self._budgets is not None:
+            await self._budgets.delete_for_category(existing.name)
         return await self._categories.delete(category_id)
 
 

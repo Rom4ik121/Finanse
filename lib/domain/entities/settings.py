@@ -33,6 +33,7 @@ class AppSettings(BaseModel):
     subscription_reminders: bool = True
     debt_reminders: bool = True
     goal_milestones: bool = True
+    budget_alerts: bool = True
     low_balance_threshold: Optional[float] = None
     reminder_time: str = "09:00"  # local HH:MM for daily reminder sweep
     reminder_days: int = 3  # days before subscription billing to remind

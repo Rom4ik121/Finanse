@@ -169,7 +169,7 @@ async def _show_form(
             return
 
         close()
-        state.bump_refresh("dashboard", "transactions", "accounts")
+        state.bump_refresh("dashboard", "transactions", "accounts", "budgets")
         snack(page, tr("action.saved", lang))
         if on_saved:
             on_saved()

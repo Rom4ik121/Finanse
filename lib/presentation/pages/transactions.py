@@ -503,7 +503,7 @@ class TransactionsPage(ft.Column):
 
         async def _do() -> None:
             await self._state.container.delete_transaction.execute(tx.id)
-            self._state.bump_refresh("dashboard", "transactions", "accounts")
+            self._state.bump_refresh("dashboard", "transactions", "accounts", "budgets")
             snack(self._page, tr("action.saved", lang))
 
         confirm_dialog(
@@ -674,7 +674,7 @@ class TransactionsPage(ft.Column):
                 snack(self._page, str(exc), error=True)
                 return
             close()
-            self._state.bump_refresh("dashboard", "transactions", "accounts")
+            self._state.bump_refresh("dashboard", "transactions", "accounts", "budgets")
             snack(self._page, tr("action.saved", lang))
 
         close = open_fullscreen_form(

@@ -128,7 +128,7 @@ class AccountsPage(ft.Column):
 
         async def _do() -> None:
             await self._state.container.delete_account.execute(account.id)
-            self._state.bump_refresh("dashboard", "accounts", "transactions")
+            self._state.bump_refresh("dashboard", "accounts", "transactions", "budgets")
             snack(self._page, tr("action.saved", lang))
 
         confirm_dialog(
@@ -338,7 +338,7 @@ class AccountsPage(ft.Column):
                 snack(self._page, str(exc), error=True)
                 return
             _close_editor()
-            self._state.bump_refresh("dashboard", "accounts", "transactions")
+            self._state.bump_refresh("dashboard", "accounts", "transactions", "budgets")
             snack(self._page, tr("action.saved", lang))
 
         title = tr("action.edit", lang) if account else tr("action.add", lang)
