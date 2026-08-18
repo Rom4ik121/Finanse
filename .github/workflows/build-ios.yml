@@ -4,34 +4,44 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
+  build:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.x'
+        channel: 'stable'
 
-      - name: Install Flet
-        run: |
-          pip install "flet>=0.83.0,<0.87"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flet
+        flutter doctor
 
-      - name: Build iOS
-        run: |
-          flet build ipa --yes
+    - name: Bootstrap Flet iOS Project
+      run: flet build ipa --no-codesign || true
 
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: FinWise-iOS
-          path: build/ipa/
-          
+    - name: Build iOS App (.app)
+      run: flutter build ios --release --no-codesign
+
+    - name: Package to IPA
+      run: |
+        mkdir -p Payload
+        cp -r build/ios/iphoneos/Runner.app Payload/
+        zip -r flet_app.ipa Payload
+
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flet-ios-app
+        path: flet_app.ipa
