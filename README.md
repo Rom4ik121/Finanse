@@ -15,6 +15,7 @@
 | Разработка | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
 | Сборка APK/IPA | [docs/BUILD.md](docs/BUILD.md) |
 | Codemagic (IPA) | [docs/CODEMAGIC.md](docs/CODEMAGIC.md) |
+| Глубокий технический разбор | [docs/DEEP_DIVE.md](docs/DEEP_DIVE.md) |
 
 ## Быстрый старт
 
@@ -78,3 +79,7 @@ tests/              # unit + integration
 ## Зависимости
 
 См. `requirements.txt` и `pyproject.toml` (`flet`, SQLAlchemy, Pydantic, httpx, matplotlib, reportlab, Alembic, …).
+
+
+
+

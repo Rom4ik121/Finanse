@@ -22,6 +22,7 @@
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Запуск, тесты, seed, пути БД, env |
 | [BUILD.md](BUILD.md) | Сборка APK / IPA |
 | [CODEMAGIC.md](CODEMAGIC.md) | CI: IPA через Codemagic |
+| [DEEP_DIVE.md](DEEP_DIVE.md) | Подробный технический разбор кода: bootstrap, DI-контейнер, use cases, RateBook, бюджеты, безопасность, недокументированные детали |
 
 ## Быстрый старт
 

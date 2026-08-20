@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
@@ -688,8 +690,32 @@ DEFAULT_CATEGORY_SEED: Final[tuple[tuple[str, str, str, str], ...]] = (
 )
 
 
+def _is_ios() -> bool:
+    """Detect iOS (incl. Flet iOS builds via Serious Python, Python 3.14)."""
+    if sys.platform != "darwin":
+        return False
+    # iOS app containers expose this directory; a normal macOS machine does not.
+    if os.path.isdir("/private/var/mobile/Containers"):
+        return True
+    if os.environ.get("FTC_DEVICE") or os.environ.get("FLET_IOS"):
+        return True
+    return False
+
+
 def _default_data_dir() -> Path:
-    """Resolve the application data directory under the user profile."""
+    """Resolve the application data directory under the user profile.
+
+    On iOS the app sandbox only allows writing inside its own container:
+    ``platformdirs.user_data_dir()`` would resolve to ``~/.local/share/finanse``
+    whose ``.local`` segment cannot be created (``PermissionError``) — and it
+    would not be backed up by iCloud anyway. Use ``Library/Application Support``
+    inside the container instead.
+    """
+    if _is_ios():
+        path = Path.home() / "Library" / "Application Support" / APP_NAME
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
     if user_data_dir is not None:
         path = Path(user_data_dir(APP_NAME, APP_AUTHOR))
     else:
