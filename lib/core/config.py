@@ -694,8 +694,13 @@ def _is_ios() -> bool:
     """Detect iOS (incl. Flet iOS builds via Serious Python, Python 3.14)."""
     if sys.platform != "darwin":
         return False
-    # iOS app containers expose this directory; a normal macOS machine does not.
-    if os.path.isdir("/private/var/mobile/Containers"):
+    # On iOS the app sandbox only permits access to its own container under
+    # ``/private/var/mobile/Containers``.  ``os.path.isdir`` on that parent
+    # path fails with ``PermissionError`` (silently returning ``False``)
+    # because the sandbox forbids ``stat`` outside the container.  Instead,
+    # check whether the user's home directory itself lives under that prefix.
+    home = str(Path.home())
+    if home.startswith("/private/var/mobile/Containers/"):
         return True
     if os.environ.get("FTC_DEVICE") or os.environ.get("FLET_IOS"):
         return True
