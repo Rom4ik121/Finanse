@@ -17,6 +17,7 @@ from lib.domain.use_cases.transactions import StatsPeriod
 from lib.infrastructure.services.localization import localize_category_name
 from lib.infrastructure.services.notification_service import NotificationKind
 from lib.presentation.styles import page_header
+from lib.presentation.money_input import make_amount_field, parse_amount
 from lib.presentation.utils import format_date, format_money, run_async, safe_update, snack, tr
 from lib.presentation.widgets.category_picker import CategoryPicker
 from lib.presentation.widgets.confirm_dialog import confirm_dialog
@@ -177,11 +178,14 @@ class TransactionsPage(ft.Column):
         lang = self._state.language
         parts: list[str] = []
         if self._type_value not in (None, "all"):
-            key = (
-                "transaction.income"
-                if self._type_value == TransactionType.INCOME.value
-                else "transaction.expense"
-            )
+            if self._type_value == "transfer":
+                key = "transaction.transfer"
+            else:
+                key = (
+                    "transaction.income"
+                    if self._type_value == TransactionType.INCOME.value
+                    else "transaction.expense"
+                )
             parts.append(tr(key, lang))
         if self._category_value not in (None, "all"):
             parts.append(str(self._category_value))
@@ -215,6 +219,10 @@ class TransactionsPage(ft.Column):
                 ft.DropdownOption(
                     key=TransactionType.EXPENSE.value,
                     text=tr("transaction.expense", lang),
+                ),
+                ft.DropdownOption(
+                    key="transfer",
+                    text=tr("transaction.transfer", lang),
                 ),
             ],
             dense=True,
@@ -329,6 +337,19 @@ class TransactionsPage(ft.Column):
             self._category_map = {cat.name: cat for cat in cats}
         self._meta_token = token
 
+    def _list_filters(self) -> dict:
+        """Shared list() kwargs for type / category filters."""
+        category = None
+        if self._category_value not in (None, "all"):
+            category = self._category_value
+        filters: dict = {"category": category}
+        if self._type_value == "transfer":
+            filters["has_transfer"] = True
+        elif self._type_value not in (None, "all"):
+            filters["transaction_type"] = TransactionType(self._type_value)
+            filters["has_transfer"] = False
+        return filters
+
     def _render_list(self, items: list[Transaction], *, lang: str) -> None:
         if not items:
             self._list.controls = [
@@ -404,12 +425,6 @@ class TransactionsPage(ft.Column):
             return
 
         c = self._state.container
-        tx_type = None
-        if self._type_value not in (None, "all"):
-            tx_type = TransactionType(self._type_value)
-        category = None
-        if self._category_value not in (None, "all"):
-            category = self._category_value
         try:
             date_from = _parse_date(self._date_from_value)
             date_to = _parse_date(self._date_to_value, end_of_day=True)
@@ -417,12 +432,11 @@ class TransactionsPage(ft.Column):
             return
         try:
             rows = await c.list_transactions.execute(
-                category=category,
-                transaction_type=tx_type,
                 date_from=date_from,
                 date_to=date_to,
                 limit=_PAGE_SIZE + 1,
                 offset=self._offset,
+                **self._list_filters(),
             )
         except Exception as exc:  # noqa: BLE001
             snack(self._page, str(exc), error=True)
@@ -443,13 +457,6 @@ class TransactionsPage(ft.Column):
         safe_update(self._filter_summary)
 
         c = self._state.container
-        tx_type = None
-        if self._type_value not in (None, "all"):
-            tx_type = TransactionType(self._type_value)
-        category = None
-        if self._category_value not in (None, "all"):
-            category = self._category_value
-
         try:
             date_from = _parse_date(self._date_from_value)
             date_to = _parse_date(self._date_to_value, end_of_day=True)
@@ -462,14 +469,14 @@ class TransactionsPage(ft.Column):
         try:
             await self._ensure_meta()
             query = (self._search.value or "").strip().lower()
+            filters = self._list_filters()
             if query:
                 scanned = await c.list_transactions.execute(
-                    category=category,
-                    transaction_type=tx_type,
                     date_from=date_from,
                     date_to=date_to,
                     limit=_SEARCH_SCAN_LIMIT,
                     offset=0,
+                    **filters,
                 )
                 self._search_cache = [
                     tx for tx in scanned if _matches_query(tx, query)
@@ -479,12 +486,11 @@ class TransactionsPage(ft.Column):
                 self._has_more = len(self._search_cache) > _PAGE_SIZE
             else:
                 rows = await c.list_transactions.execute(
-                    category=category,
-                    transaction_type=tx_type,
                     date_from=date_from,
                     date_to=date_to,
                     limit=_PAGE_SIZE + 1,
                     offset=0,
+                    **filters,
                 )
                 self._search_cache = []
                 self._has_more = len(rows) > _PAGE_SIZE
@@ -510,8 +516,12 @@ class TransactionsPage(ft.Column):
             self._page,
             title=tr("action.confirm_delete", lang),
             message=(
-                f"{localize_category_name(tx.category, lang)} · "
-                f"{format_money(tx.amount, tx.currency)}"
+                tr("transfer.delete_pair", lang)
+                if tx.is_transfer
+                else (
+                    f"{localize_category_name(tx.category, lang)} · "
+                    f"{format_money(tx.amount, tx.currency)}"
+                )
             ),
             confirm_text=tr("action.delete", lang),
             cancel_text=tr("action.cancel", lang),
@@ -537,6 +547,10 @@ class TransactionsPage(ft.Column):
             snack(self._page, tr("empty.accounts", lang), error=True)
             return
 
+        if tx is not None and tx.is_transfer:
+            await self._open_transfer_editor(tx)
+            return
+
         type_dd = ft.Dropdown(
             label=tr("field.type", lang),
             value=(tx.type.value if tx else TransactionType.EXPENSE.value),
@@ -551,10 +565,10 @@ class TransactionsPage(ft.Column):
                 ),
             ],
         )
-        amount_tf = ft.TextField(
+        amount_tf = make_amount_field(
+            lang,
             label=tr("field.amount", lang),
-            value=str(tx.amount) if tx else "",
-            keyboard_type=ft.KeyboardType.NUMBER,
+            value=tx.amount if tx else "",
         )
         account_dd = ft.Dropdown(
             label=tr("field.account", lang),
@@ -604,7 +618,7 @@ class TransactionsPage(ft.Column):
 
         async def _save() -> None:
             try:
-                amount = Decimal(str(amount_tf.value or "").replace(",", "."))
+                amount = parse_amount(amount_tf.value)
                 if amount <= 0:
                     raise InvalidOperation
             except (InvalidOperation, ValueError):
@@ -692,6 +706,54 @@ class TransactionsPage(ft.Column):
                 comment_tf,
                 tags_tf,
             ],
+            on_save=_save,
+        )
+
+    async def _open_transfer_editor(self, tx: Transaction) -> None:
+        """Comment/tags only — amount and accounts of a transfer stay locked."""
+        lang = self._state.language
+        amount_tf = make_amount_field(
+            lang,
+            label=tr("field.amount", lang),
+            value=tx.amount,
+            read_only=True,
+        )
+        comment_tf = ft.TextField(
+            label=tr("field.comment", lang),
+            value=tx.comment,
+        )
+        tags_tf = ft.TextField(
+            label=tr("field.tags", lang),
+            value=", ".join(tx.tags),
+        )
+        hint = ft.Text(
+            tr("transfer.edit_hint", lang),
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+        )
+
+        async def _save() -> None:
+            tags = [
+                p.strip().lstrip("#")
+                for p in (tags_tf.value or "").split(",")
+                if p.strip()
+            ]
+            entity = tx.model_copy(update={"comment": comment_tf.value or "", "tags": tags})
+            try:
+                await self._state.container.update_transaction.execute(entity)
+            except Exception as exc:  # noqa: BLE001
+                snack(self._page, str(exc), error=True)
+                return
+            close()
+            self._state.bump_refresh("dashboard", "transactions", "accounts", "budgets")
+            snack(self._page, tr("action.saved", lang))
+
+        close = open_fullscreen_form(
+            self._page,
+            title=tr("transaction.transfer", lang),
+            lang=lang,
+            overlay_key="transfer_leg_editor",
+            body=[hint, amount_tf, comment_tf, tags_tf],
             on_save=_save,
         )
 

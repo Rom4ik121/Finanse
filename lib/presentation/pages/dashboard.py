@@ -269,7 +269,7 @@ class DashboardPage(ft.Column):
         safe_update(self._body)
 
     async def _budgets_widget(self, lang: str, currency: str) -> ft.Control:
-        """Top-3 category budgets by usage for the current month."""
+        """Category budgets for the current month."""
         now = datetime.now(timezone.utc)
         uc = getattr(self._state.container, "get_budgets_for_month", None)
         title = section_title(tr("dashboard.budgets", lang))
@@ -279,8 +279,8 @@ class DashboardPage(ft.Column):
             items = await uc.execute(now.month, now.year)
         except Exception:  # noqa: BLE001
             items = []
-        top = list(items)[:3]
-        if not top:
+        shown = sorted(items, key=lambda p: p.percent, reverse=True)
+        if not shown:
             body: ft.Control = ft.Text(
                 tr("dashboard.budgets_empty", lang),
                 size=13,
@@ -288,7 +288,7 @@ class DashboardPage(ft.Column):
             )
         else:
             rows: list[ft.Control] = []
-            for progress in top:
+            for progress in shown:
                 percent = progress.percent
                 color = ft.Colors.ERROR if percent > 100 else (
                     ft.Colors.AMBER if percent >= 80 else ft.Colors.GREEN

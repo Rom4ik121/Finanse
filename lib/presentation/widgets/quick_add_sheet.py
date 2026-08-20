@@ -12,6 +12,7 @@ import flet as ft
 from lib.domain.entities.account import Account
 from lib.domain.entities.category import CategoryKind
 from lib.domain.entities.transaction import Transaction, TransactionType
+from lib.presentation.money_input import make_amount_field, parse_amount
 from lib.presentation.utils import run_async, snack, tr
 from lib.presentation.widgets.category_picker import CategoryPicker
 from lib.presentation.widgets.fullscreen_form import open_fullscreen_form
@@ -80,9 +81,9 @@ async def _show_form(
         ],
         expand=True,
     )
-    amount_tf = ft.TextField(
+    amount_tf = make_amount_field(
+        lang,
         label=tr("field.amount", lang),
-        keyboard_type=ft.KeyboardType.NUMBER,
         expand=True,
         autofocus=True,
     )
@@ -118,7 +119,7 @@ async def _show_form(
 
     async def _save() -> None:
         try:
-            amount = Decimal(str(amount_tf.value or "").replace(",", ".").strip())
+            amount = parse_amount(amount_tf.value)
             if amount <= 0:
                 raise InvalidOperation
         except (InvalidOperation, ValueError):

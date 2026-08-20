@@ -119,6 +119,7 @@ def _native_pie_chart(
     width: int,
     height: int,
     language: str,
+    show_legend: bool = True,
 ) -> ft.Control:
     """Stacked bar + share labels — works without matplotlib on mobile."""
     from lib.infrastructure.services.localization import t
@@ -191,7 +192,11 @@ def _native_pie_chart(
                     color=ft.Colors.ON_SURFACE,
                 ),
                 ft.Row(spacing=0, alignment=ft.MainAxisAlignment.CENTER, controls=segments),
-                ft.Column(spacing=4, tight=True, controls=legend[:4]),
+                *(
+                    [ft.Column(spacing=4, tight=True, controls=legend[:4])]
+                    if show_legend
+                    else []
+                ),
             ],
         ),
     )
@@ -343,6 +348,7 @@ def build_pie_chart_image(
     height: int = 280,
     dark: bool = True,
     language: str = "ru",
+    show_legend: bool = True,
 ) -> ft.Control:
     """Donut chart (desktop) or stacked bar (mobile)."""
     mpl = _load_matplotlib()
@@ -357,10 +363,18 @@ def build_pie_chart_image(
                 height=height,
                 dark=dark,
                 language=language,
+                show_legend=show_legend,
             )
         except Exception:  # noqa: BLE001
             pass
-    return _native_pie_chart(labels, values, width=width, height=height, language=language)
+    return _native_pie_chart(
+        labels,
+        values,
+        width=width,
+        height=height,
+        language=language,
+        show_legend=show_legend,
+    )
 
 
 def build_line_chart_image(
@@ -411,6 +425,7 @@ def _build_pie_chart_mpl(
     height: int,
     dark: bool,
     language: str,
+    show_legend: bool = True,
 ) -> ft.Control:
     from lib.infrastructure.services.localization import t
 
@@ -478,23 +493,26 @@ def _build_pie_chart_mpl(
         f"{label}  ·  {amount / total * 100:.0f}%"
         for label, amount in zip(labels, nums)
     ]
-    ax.legend(
-        wedges,
-        legend_labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.02),
-        ncol=1 if len(labels) <= 4 else 2,
-        fontsize=8,
-        frameon=False,
-        labelcolor=text,
-        handlelength=1.0,
-        columnspacing=1.0,
-    )
+    if show_legend:
+        ax.legend(
+            wedges,
+            legend_labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.02),
+            ncol=1 if len(labels) <= 4 else 2,
+            fontsize=8,
+            frameon=False,
+            labelcolor=text,
+            handlelength=1.0,
+            columnspacing=1.0,
+        )
+        fig.tight_layout()
+    else:
+        fig.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
     if title:
         ax.set_title(title, fontsize=11, pad=6, color=text, fontweight="600")
     ax.axis("equal")
     fig.patch.set_alpha(0)
-    fig.tight_layout()
     return _fig_to_image(fig, width=width, height=height)
 
 

@@ -9,8 +9,9 @@ import flet as ft
 
 from lib.domain.entities.currency import Currency, ExchangeRate
 from lib.domain.entities.currency_codes import normalize_currency_code
-from lib.presentation.styles import card_surface, muted_text, page_header, section_title
-from lib.presentation.utils import format_date, format_money, run_async, safe_convert, snack, tr
+from lib.presentation.money_input import make_amount_field, parse_amount
+from lib.presentation.styles import card_surface, muted_text, page_header
+from lib.presentation.utils import format_money, run_async, safe_convert, snack, tr
 from lib.presentation.widgets.currency_ticker_picker import CurrencyTickerPicker
 from lib.presentation.widgets.empty_state import EmptyState
 from lib.presentation.widgets.loading import loading_indicator
@@ -109,24 +110,25 @@ class CurrenciesPage(ft.Column):
         base = state.base_currency
         default_quote = "USD" if base != "USD" else "EUR"
 
-        self._amount = ft.TextField(
+        self._amount = make_amount_field(
+            lang,
             label=tr("currencies.amount", lang),
             value="1",
-            keyboard_type=ft.KeyboardType.NUMBER,
+            extra_on_change=lambda _e: run_async(page, self._recalculate),
             expand=True,
             dense=True,
             border_radius=14,
             filled=True,
             bgcolor=ft.Colors.SURFACE,
-            on_change=lambda _e: run_async(page, self._recalculate),
-            on_submit=lambda _e: run_async(page, self._recalculate),
         )
+        self._amount.on_submit = lambda _e: run_async(page, self._recalculate)
         self._from_picker = CurrencyTickerPicker(
             page,
             lang=lang,
             label=tr("currencies.from", lang),
             value=base,
             include_crypto=True,
+            code_only=True,
             on_changed=lambda _code: run_async(page, self._recalculate),
         )
         self._to_picker = CurrencyTickerPicker(
@@ -135,41 +137,48 @@ class CurrenciesPage(ft.Column):
             label=tr("currencies.to", lang),
             value=default_quote,
             include_crypto=True,
+            code_only=True,
             on_changed=lambda _code: run_async(page, self._recalculate),
         )
         self._result_value = ft.Text(
             "—",
-            size=26,
+            size=18,
             weight=ft.FontWeight.W_700,
             color=ft.Colors.PRIMARY,
+            max_lines=1,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            text_align=ft.TextAlign.RIGHT,
         )
-        self._rate_forward = muted_text("—", size=13)
-        self._rate_reverse = muted_text("—", size=13)
-        self._result_hint = muted_text(tr("currencies.compare_hint", lang), size=12)
+        self._rate_line = ft.Text(
+            "",
+            size=11,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            max_lines=2,
+        )
+        self._result_hint = ft.Text("", size=11, color=ft.Colors.ERROR, visible=False)
 
         self._list_search = ft.TextField(
             label=tr("currencies.search", lang),
             hint_text=tr("currencies.search_hint", lang),
             prefix_icon=ft.Icons.SEARCH,
             dense=True,
-            border_radius=14,
+            border_radius=12,
             filled=True,
             bgcolor=ft.Colors.SURFACE,
             on_change=lambda _e: self._render_lists(),
             on_submit=lambda _e: self._apply_search_to_converter(),
         )
-        self._fiat_list = ft.Column(spacing=4)
-        self._crypto_list = ft.Column(spacing=4)
-        self._fiat_section = ft.Column(spacing=8, tight=True)
-        self._crypto_section = ft.Column(spacing=8, tight=True)
-        self._lists_host = ft.Column(spacing=14)
+        self._base_caption = muted_text("", size=11)
+        self._rates_list = ft.ListView(expand=True, spacing=0, padding=ft.Padding.only(bottom=8))
+        self._converter = self._build_converter_card(lang)
         self._body = ft.Column(
             expand=True,
-            scroll=ft.ScrollMode.AUTO,
-            spacing=16,
+            spacing=8,
             controls=[
-                self._build_converter_card(lang),
-                self._lists_host,
+                self._converter,
+                self._list_search,
+                self._base_caption,
+                self._rates_list,
             ],
         )
         super().__init__(
@@ -183,16 +192,17 @@ class CurrenciesPage(ft.Column):
                         on_click=lambda _e: state.close_secondary(),
                     ),
                     actions=[
-                        ft.FilledButton(
-                            tr("currencies.refresh", lang),
+                        ft.IconButton(
                             icon=ft.Icons.SYNC,
+                            icon_color=ft.Colors.PRIMARY,
+                            tooltip=tr("currencies.refresh", lang),
                             on_click=lambda _e: run_async(page, self.refresh_rates),
                         ),
                     ],
                 ),
                 ft.Container(
                     expand=True,
-                    padding=ft.Padding.symmetric(horizontal=16),
+                    padding=ft.Padding.only(left=12, right=12, bottom=8),
                     content=self._body,
                 ),
             ],
@@ -208,68 +218,31 @@ class CurrenciesPage(ft.Column):
         )
         return card_surface(
             ft.Column(
-                spacing=14,
+                spacing=8,
                 tight=True,
                 controls=[
                     ft.Row(
-                        spacing=10,
+                        spacing=8,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
+                            ft.Container(expand=True, content=self._amount),
                             ft.Container(
-                                width=40,
-                                height=40,
-                                border_radius=12,
-                                bgcolor=ft.Colors.PRIMARY_CONTAINER,
-                                alignment=ft.Alignment.CENTER,
-                                content=ft.Icon(
-                                    ft.Icons.COMPARE_ARROWS_ROUNDED,
-                                    color=ft.Colors.ON_PRIMARY_CONTAINER,
-                                    size=22,
-                                ),
-                            ),
-                            ft.Column(
-                                spacing=2,
-                                tight=True,
                                 expand=True,
-                                controls=[
-                                    ft.Text(
-                                        tr("currencies.compare", lang),
-                                        size=16,
-                                        weight=ft.FontWeight.W_700,
-                                    ),
-                                    muted_text(
-                                        tr("currencies.compare_hint", lang),
-                                        size=12,
-                                    ),
-                                ],
+                                alignment=ft.Alignment.CENTER_RIGHT,
+                                content=self._result_value,
                             ),
                         ],
                     ),
-                    self._amount,
                     ft.Row(
-                        spacing=8,
+                        spacing=4,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[self._from_picker, swap_btn, self._to_picker],
                     ),
-                    ft.Container(
-                        padding=ft.Padding.symmetric(horizontal=14, vertical=14),
-                        border_radius=14,
-                        bgcolor=ft.Colors.SURFACE,
-                        border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-                        content=ft.Column(
-                            spacing=8,
-                            tight=True,
-                            controls=[
-                                muted_text(tr("currencies.result", lang), size=11),
-                                self._result_value,
-                                self._rate_forward,
-                                self._rate_reverse,
-                                self._result_hint,
-                            ],
-                        ),
-                    ),
+                    self._rate_line,
+                    self._result_hint,
                 ],
-            )
+            ),
+            padding=12,
         )
 
     def _selected_pair(self) -> tuple[str, str]:
@@ -282,11 +255,8 @@ class CurrenciesPage(ft.Column):
         return src, dst
 
     def _parse_amount(self) -> Optional[Decimal]:
-        raw = (self._amount.value or "").strip().replace(" ", "").replace(",", ".")
-        if not raw:
-            return None
         try:
-            value = Decimal(raw)
+            value = parse_amount(self._amount.value)
         except (InvalidOperation, ValueError):
             return None
         if value < 0:
@@ -316,8 +286,7 @@ class CurrenciesPage(ft.Column):
             src, dst = self._selected_pair()
             if amount is None:
                 self._result_value.value = "—"
-                self._rate_forward.value = "—"
-                self._rate_reverse.value = "—"
+                self._rate_line.value = ""
                 self._result_hint.value = tr("invalid_amount", lang)
                 self._result_hint.color = ft.Colors.ERROR
                 self._update_result()
@@ -335,37 +304,27 @@ class CurrenciesPage(ft.Column):
 
             if converted is None or one_forward is None or one_reverse is None:
                 self._result_value.value = "—"
-                self._rate_forward.value = "—"
-                self._rate_reverse.value = "—"
+                self._rate_line.value = ""
                 self._result_hint.value = tr("currencies.no_rate", lang)
                 self._result_hint.color = ft.Colors.ERROR
             else:
                 self._result_value.value = format_money(converted, dst)
-                self._rate_forward.value = tr(
-                    "currencies.unit_rate",
-                    lang,
-                    src=src,
-                    dst=dst,
-                    rate=_format_rate(one_forward),
+                self._rate_line.value = (
+                    f"1 {src} = {_format_rate(one_forward)} {dst}"
+                    f"  ·  1 {dst} = {_format_rate(one_reverse)} {src}"
                 )
-                self._rate_reverse.value = tr(
-                    "currencies.unit_rate",
-                    lang,
-                    src=dst,
-                    dst=src,
-                    rate=_format_rate(one_reverse),
-                )
-                self._result_hint.value = f"{format_money(amount, src)} → {dst}"
+                self._result_hint.value = ""
                 self._result_hint.color = ft.Colors.ON_SURFACE_VARIANT
             self._update_result()
         finally:
             self._converting = False
 
     def _update_result(self) -> None:
+        self._result_hint.visible = bool(self._result_hint.value)
+        self._rate_line.visible = bool(self._rate_line.value)
         for control in (
             self._result_value,
-            self._rate_forward,
-            self._rate_reverse,
+            self._rate_line,
             self._result_hint,
         ):
             try:
@@ -376,18 +335,41 @@ class CurrenciesPage(ft.Column):
     def _tile(self, currency: Currency) -> ft.Control:
         code = currency.code
         rate = self._rate_map.get(code.upper())
-        subtitle = f"{currency.symbol} · {currency.name}"
+        name = currency.name or ""
         trailing = "—"
         if rate is not None:
             trailing = _format_rate(Decimal(str(rate.rate)))  # type: ignore[attr-defined]
-            subtitle += f" · {format_date(rate.updated_at, with_time=True)}"  # type: ignore[attr-defined]
-        return ft.ListTile(
-            leading=ft.CircleAvatar(content=ft.Text(code[:3], size=11)),
-            title=ft.Text(code, weight=ft.FontWeight.W_600),
-            subtitle=ft.Text(subtitle, size=12),
-            trailing=ft.Text(trailing, weight=ft.FontWeight.W_600),
-            on_click=lambda _e, c=code: run_async(
-                self._page, self._use_as_quote, c
+        return ft.Container(
+            padding=ft.Padding.symmetric(horizontal=4, vertical=6),
+            border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+            ink=True,
+            on_click=lambda _e, c=code: run_async(self._page, self._use_as_quote, c),
+            content=ft.Row(
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Text(code, width=52, weight=ft.FontWeight.W_700, size=13),
+                    ft.Text(
+                        name,
+                        expand=True,
+                        size=12,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                        max_lines=1,
+                    ),
+                    ft.Text(trailing, size=12, weight=ft.FontWeight.W_600),
+                ],
+            ),
+        )
+
+    def _section_label(self, text: str) -> ft.Control:
+        return ft.Container(
+            padding=ft.Padding.only(top=10, bottom=4),
+            content=ft.Text(
+                text,
+                size=13,
+                weight=ft.FontWeight.W_700,
+                color=ft.Colors.PRIMARY,
             ),
         )
 
@@ -397,36 +379,25 @@ class CurrenciesPage(ft.Column):
         filtered = self._filtered_currencies()
         fiat = [c for c in filtered if not c.is_crypto]
         crypto = [c for c in filtered if c.is_crypto]
+        self._base_caption.value = tr("currencies.base_rates", lang, base=base)
 
-        self._fiat_list.controls = [self._tile(c) for c in fiat]
-        self._crypto_list.controls = [self._tile(c) for c in crypto]
-
-        self._fiat_section.controls = [
-            section_title(tr("currencies.fiat", lang)),
-            self._fiat_list
-            if fiat
-            else muted_text(tr("currencies.not_found", lang), size=12),
-        ]
-        self._crypto_section.controls = [
-            section_title(tr("currencies.crypto", lang)),
-            self._crypto_list
-            if crypto
-            else muted_text(tr("currencies.not_found", lang), size=12),
-        ]
-
-        self._lists_host.controls = [
-            section_title(tr("currencies.base_rates", lang, base=base)),
-            self._list_search,
-            muted_text(f"1 {base} = …", size=12),
-            self._fiat_section,
-            self._crypto_section,
-        ]
+        rows: list[ft.Control] = []
+        if fiat:
+            rows.append(self._section_label(tr("currencies.fiat", lang)))
+            rows.extend(self._tile(c) for c in fiat)
+        if crypto:
+            rows.append(self._section_label(tr("currencies.crypto", lang)))
+            rows.extend(self._tile(c) for c in crypto)
         if not filtered and self._search_query():
-            self._lists_host.controls.append(
+            rows.append(
                 EmptyState(tr("currencies.not_found", lang), icon=ft.Icons.SEARCH_OFF)
             )
+        elif not filtered:
+            rows.append(muted_text(tr("currencies.not_found", lang), size=12))
+        self._rates_list.controls = rows
         try:
-            self._lists_host.update()
+            self._base_caption.update()
+            self._rates_list.update()
         except Exception:  # noqa: BLE001
             pass
 
@@ -450,9 +421,9 @@ class CurrenciesPage(ft.Column):
     async def reload(self) -> None:
         """Load currencies and known rates vs base currency."""
         lang = self._state.language
-        self._lists_host.controls = [loading_indicator()]
+        self._rates_list.controls = [loading_indicator()]
         try:
-            self._lists_host.update()
+            self._rates_list.update()
         except Exception:  # noqa: BLE001
             pass
 
@@ -476,9 +447,9 @@ class CurrenciesPage(ft.Column):
                 rates = await repo.list_all_rates()
         except Exception as exc:  # noqa: BLE001
             snack(self._page, str(exc), error=True)
-            self._lists_host.controls = [EmptyState(tr("error.generic", lang))]
+            self._rates_list.controls = [EmptyState(tr("error.generic", lang))]
             try:
-                self._lists_host.update()
+                self._rates_list.update()
             except Exception:  # noqa: BLE001
                 pass
             return

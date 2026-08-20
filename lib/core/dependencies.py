@@ -52,6 +52,7 @@ class Container:
     delete_transaction: Any = None
     list_transactions: Any = None
     get_transaction_stats: Any = None
+    transfer_between_accounts: Any = None
 
     # Use cases — accounts
     create_account: Any = None
@@ -376,6 +377,7 @@ def build_container(
         DeleteTransactionUseCase,
         GetTransactionStatsUseCase,
         ListTransactionsUseCase,
+        TransferAccountsUseCase,
         UpdateTransactionUseCase,
     )
 
@@ -611,6 +613,27 @@ def build_container(
         "currency_repository",
         "settings_repository",
     )
+
+    if (
+        container.add_transaction is not None
+        and container.delete_transaction is not None
+        and container.account_repository is not None
+        and container.currency_repository is not None
+    ):
+        try:
+            container.transfer_between_accounts = TransferAccountsUseCase(
+                container.add_transaction,
+                container.delete_transaction,
+                container.account_repository,
+                container.currency_repository,
+                container.find_or_create_category,
+            )
+        except Exception as exc:  # pragma: no cover
+            container.missing.append("transfer_between_accounts")
+            container.errors["transfer_between_accounts"] = f"construct failed: {exc}"
+    else:
+        container.missing.append("transfer_between_accounts")
+        container.errors["transfer_between_accounts"] = "missing transfer dependencies"
 
     if container.missing:
         logger.info(

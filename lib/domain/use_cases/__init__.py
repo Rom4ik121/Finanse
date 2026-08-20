@@ -53,6 +53,7 @@ from lib.domain.use_cases.transactions import (
     DeleteTransactionUseCase,
     GetTransactionStatsUseCase,
     ListTransactionsUseCase,
+    TransferAccountsUseCase,
     UpdateTransactionUseCase,
 )
 
@@ -62,6 +63,7 @@ __all__ = [
     "DeleteTransactionUseCase",
     "ListTransactionsUseCase",
     "GetTransactionStatsUseCase",
+    "TransferAccountsUseCase",
     "CreateAccountUseCase",
     "UpdateAccountUseCase",
     "DeleteAccountUseCase",

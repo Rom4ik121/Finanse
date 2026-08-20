@@ -21,6 +21,51 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Cash",
         "uz": "Naqd pul",
     },
+    "account.stats.title": {
+        "ru": "Счёт",
+        "en": "Account",
+        "uz": "Hisob",
+    },
+    "account.stats.missing": {
+        "ru": "Счёт не найден",
+        "en": "Account not found",
+        "uz": "Hisob topilmadi",
+    },
+    "account.stats.empty": {
+        "ru": "За этот период операций нет",
+        "en": "No activity in this period",
+        "uz": "Bu davrda operatsiyalar yo‘q",
+    },
+    "account.stats.count": {
+        "ru": "{count} операций",
+        "en": "{count} transactions",
+        "uz": "{count} ta operatsiya",
+    },
+    "account.stats.transfer_in": {
+        "ru": "Переводы входящие",
+        "en": "Transfers in",
+        "uz": "Kiruvchi o‘tkazmalar",
+    },
+    "account.stats.transfer_out": {
+        "ru": "Переводы исходящие",
+        "en": "Transfers out",
+        "uz": "Chiquvchi o‘tkazmalar",
+    },
+    "account.stats.spend_chart": {
+        "ru": "Расходы по категориям",
+        "en": "Spending by category",
+        "uz": "Turkumlar bo‘yicha xarajat",
+    },
+    "account.stats.spend_hint": {
+        "ru": "Без переводов между счетами",
+        "en": "Excluding transfers between accounts",
+        "uz": "Hisoblar o‘rtasidagi o‘tkazmalarsiz",
+    },
+    "account.stats.recent": {
+        "ru": "Последние операции",
+        "en": "Recent activity",
+        "uz": "So‘nggi operatsiyalar",
+    },
     "action.add": {
         "ru": "Добавить",
         "en": "Add",
@@ -1858,6 +1903,61 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Yearly (active)",
         "uz": "Yiliga (faol)",
     },
+    "analytics.tab.spend": {
+        "ru": "Расходы",
+        "en": "Spending",
+        "uz": "Xarajat",
+    },
+    "analytics.tab.trend": {
+        "ru": "График",
+        "en": "Trend",
+        "uz": "Grafik",
+    },
+    "analytics.tab.more": {
+        "ru": "Ещё",
+        "en": "More",
+        "uz": "Yana",
+    },
+    "analytics.income": {
+        "ru": "Доход",
+        "en": "Income",
+        "uz": "Daromad",
+    },
+    "analytics.expense": {
+        "ru": "Расход",
+        "en": "Expense",
+        "uz": "Xarajat",
+    },
+    "analytics.net": {
+        "ru": "Чистое",
+        "en": "Net",
+        "uz": "Sof",
+    },
+    "analytics.balance": {
+        "ru": "Все счета",
+        "en": "All accounts",
+        "uz": "Barcha hisoblar",
+    },
+    "analytics.savings": {
+        "ru": "Сбережения",
+        "en": "Saved",
+        "uz": "Jamg‘arma",
+    },
+    "analytics.avg_day": {
+        "ru": "В день",
+        "en": "Per day",
+        "uz": "Kuniga",
+    },
+    "analytics.ops": {
+        "ru": "Операций",
+        "en": "Operations",
+        "uz": "Operatsiyalar",
+    },
+    "analytics.no_subs": {
+        "ru": "Нет данных по подпискам",
+        "en": "No subscription data",
+        "uz": "Obunalar bo‘yicha ma’lumot yo‘q",
+    },
     "analytics.subscriptions": {
         "ru": "Подписки",
         "en": "Subscriptions",
@@ -1897,6 +1997,61 @@ STRINGS: dict[str, dict[str, str]] = {
         "ru": "Доход",
         "en": "Income",
         "uz": "Daromad",
+    },
+    "transaction.transfer": {
+        "ru": "Перевод",
+        "en": "Transfer",
+        "uz": "O‘tkazma",
+    },
+    "transfers.title": {
+        "ru": "Перевод между счетами",
+        "en": "Transfer between accounts",
+        "uz": "Hisoblar o‘rtasida o‘tkazma",
+    },
+    "transfer.from": {
+        "ru": "Откуда",
+        "en": "From",
+        "uz": "Qayerdan",
+    },
+    "transfer.to": {
+        "ru": "Куда",
+        "en": "To",
+        "uz": "Qayerga",
+    },
+    "transfer.same_account": {
+        "ru": "Выберите разные счета",
+        "en": "Choose two different accounts",
+        "uz": "Ikkita turli hisob tanlang",
+    },
+    "transfer.need_two_accounts": {
+        "ru": "Нужны минимум два активных счёта",
+        "en": "You need at least two active accounts",
+        "uz": "Kamida ikkita faol hisob kerak",
+    },
+    "transfer.insufficient": {
+        "ru": "Недостаточно средств на счёте списания",
+        "en": "Insufficient funds on the source account",
+        "uz": "Manba hisobida mablag‘ yetarli emas",
+    },
+    "transfer.no_rate": {
+        "ru": "Нет курса для этой пары валют",
+        "en": "No exchange rate for this currency pair",
+        "uz": "Bu valyuta juftligi uchun kurs yo‘q",
+    },
+    "transfer.will_credit": {
+        "ru": "Зачислится {amount} на «{account}»",
+        "en": "{amount} will be credited to “{account}”",
+        "uz": "«{account}» hisobiga {amount} tushadi",
+    },
+    "transfer.edit_hint": {
+        "ru": "Сумму и счета перевода менять нельзя — только комментарий. Удаление снимает обе стороны.",
+        "en": "Transfer amount and accounts cannot be changed — only the comment. Deleting removes both legs.",
+        "uz": "O‘tkazma summasini va hisoblarni o‘zgartirib bo‘lmaydi — faqat izoh. O‘chirish ikkala tomonni ham olib tashlaydi.",
+    },
+    "transfer.delete_pair": {
+        "ru": "Будут удалены обе стороны перевода",
+        "en": "Both sides of the transfer will be deleted",
+        "uz": "O‘tkazmaning ikkala tomoni o‘chiriladi",
     },
 }
 
@@ -1964,6 +2119,7 @@ _CATEGORY_NAME_I18N: dict[str, dict[str, str]] = {
     "Инвестиции": {"en": "Investments", "uz": "Investitsiyalar"},
     "Прочее": {"en": "Other", "uz": "Boshqa"},
     "Долг": {"en": "Debt", "uz": "Qarz"},
+    "Перевод": {"en": "Transfer", "uz": "O‘tkazma"},
 }
 
 

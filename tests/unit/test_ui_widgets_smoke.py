@@ -51,6 +51,19 @@ def test_transaction_tile_builds() -> None:
     tile = TransactionTile(tx, language="ru")
     assert tile is not None
 
+    transfer = Transaction(
+        account_id="a1",
+        amount=Decimal("5"),
+        category="Перевод",
+        date=datetime.now(timezone.utc),
+        type=TransactionType.EXPENSE,
+        currency="RUB",
+        transfer_id="t1",
+        transfer_peer_account_id="a2",
+    )
+    assert transfer.is_transfer
+    assert TransactionTile(transfer, language="en") is not None
+
 
 def test_subscription_and_debt_cards_build() -> None:
     sub = Subscription(

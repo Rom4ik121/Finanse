@@ -85,12 +85,14 @@ class CurrencyTickerPicker(ft.Container):
         on_changed: Optional[Callable[[str], None]] = None,
         expand: bool = True,
         include_crypto: bool = True,
+        code_only: bool = False,
     ) -> None:
         self._page = page
         self._lang = lang
         self._label = label
         self._on_changed = on_changed
         self._include_crypto = include_crypto
+        self._code_only = code_only
         self._overlay_key = f"currency_ticker_{id(self)}"
         self._rows = _rows_from_currencies(
             currencies, lang=lang, include_crypto=include_crypto
@@ -98,9 +100,9 @@ class CurrencyTickerPicker(ft.Container):
         self._value = normalize_currency_code(value)
 
         self._display = ft.Text(
-            _label_for(self._value, self._rows),
-            size=14,
-            weight=ft.FontWeight.W_600,
+            self._display_text(),
+            size=16 if code_only else 14,
+            weight=ft.FontWeight.W_700 if code_only else ft.FontWeight.W_600,
             overflow=ft.TextOverflow.ELLIPSIS,
             max_lines=1,
             expand=True,
@@ -115,7 +117,10 @@ class CurrencyTickerPicker(ft.Container):
             border_radius=14,
             bgcolor=ft.Colors.SURFACE,
             border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(
+                horizontal=10,
+                vertical=6 if code_only else 10,
+            ),
             ink=True,
             on_click=lambda _e: self.open(),
             content=ft.Row(
@@ -137,6 +142,11 @@ class CurrencyTickerPicker(ft.Container):
             ),
         )
 
+    def _display_text(self) -> str:
+        if self._code_only:
+            return self._value
+        return _label_for(self._value, self._rows)
+
     @property
     def value(self) -> str:
         return self._value
@@ -150,7 +160,7 @@ class CurrencyTickerPicker(ft.Container):
         self._rows = _rows_from_currencies(
             currencies, lang=self._lang, include_crypto=self._include_crypto
         )
-        self._display.value = _label_for(self._value, self._rows)
+        self._display.value = self._display_text()
         try:
             self._display.update()
         except Exception:  # noqa: BLE001
@@ -158,7 +168,7 @@ class CurrencyTickerPicker(ft.Container):
 
     def set_value(self, code: str, *, notify: bool = True) -> None:
         self._value = normalize_currency_code(code)
-        self._display.value = _label_for(self._value, self._rows)
+        self._display.value = self._display_text()
         try:
             self._display.update()
         except Exception:  # noqa: BLE001

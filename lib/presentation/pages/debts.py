@@ -21,6 +21,7 @@ from lib.presentation.styles import (
     page_header,
     summary_strip,
 )
+from lib.presentation.money_input import attach_grouped_digits, make_amount_field, parse_amount
 from lib.presentation.utils import (
     format_date,
     format_money,
@@ -335,16 +336,16 @@ class DebtsPage(ft.Column):
             body: list[ft.Control]
 
             if has_interest:
-                principal_tf = ft.TextField(
+                principal_tf = make_amount_field(
+                    lang,
                     label=f"{tr('debt.principal_amount', lang)} ({debt.currency})",
-                    value=str(debt.remaining_amount),
-                    keyboard_type=ft.KeyboardType.NUMBER,
+                    value=debt.remaining_amount,
                     autofocus=True,
                 )
-                interest_tf = ft.TextField(
+                interest_tf = make_amount_field(
+                    lang,
                     label=f"{tr('debt.interest_amount', lang)} ({debt.currency})",
                     value="",
-                    keyboard_type=ft.KeyboardType.NUMBER,
                 )
                 body = [account_dd, principal_tf, interest_tf, convert_hint]
 
@@ -354,13 +355,11 @@ class DebtsPage(ft.Column):
                         (a for a in accounts if a.id == account_dd.value), accounts[0]
                     )
                     try:
-                        principal = Decimal(
-                            str(principal_tf.value or "0").replace(",", ".")
-                        )
-                        interest = Decimal(
-                            str(interest_tf.value or "0").replace(",", ".")
+                        principal = parse_amount(principal_tf.value or "0")
+                        interest = (
+                            parse_amount(interest_tf.value)
                             if (interest_tf.value or "").strip()
-                            else "0"
+                            else Decimal("0")
                         )
                     except (InvalidOperation, ValueError):
                         convert_hint.value = ""
@@ -386,16 +385,22 @@ class DebtsPage(ft.Column):
                         convert_hint.color = ft.Colors.ON_SURFACE_VARIANT
                     convert_hint.update()
 
-                principal_tf.on_change = _refresh_conversion
-                interest_tf.on_change = _refresh_conversion
+                attach_grouped_digits(
+                    principal_tf, lang, extra_on_change=_refresh_conversion
+                )
+                attach_grouped_digits(
+                    interest_tf, lang, extra_on_change=_refresh_conversion
+                )
                 account_dd.on_select = _refresh_conversion
             else:
-                amount_tf = ft.TextField(
+                amount_tf = make_amount_field(
+                    lang,
                     label=tr("field.amount", lang),
-                    value=str(debt.remaining_amount)
-                    if accounts[0].currency.upper() == debt.currency.upper()
-                    else "",
-                    keyboard_type=ft.KeyboardType.NUMBER,
+                    value=(
+                        debt.remaining_amount
+                        if accounts[0].currency.upper() == debt.currency.upper()
+                        else ""
+                    ),
                     autofocus=True,
                 )
                 body = [account_dd, amount_tf, convert_hint]
@@ -406,9 +411,7 @@ class DebtsPage(ft.Column):
                         (a for a in accounts if a.id == account_dd.value), accounts[0]
                     )
                     try:
-                        amount = Decimal(
-                            str(amount_tf.value or "").replace(",", ".")
-                        )
+                        amount = parse_amount(amount_tf.value)
                     except (InvalidOperation, ValueError):
                         convert_hint.value = ""
                         convert_hint.update()
@@ -434,7 +437,9 @@ class DebtsPage(ft.Column):
                         convert_hint.color = ft.Colors.ON_SURFACE_VARIANT
                     convert_hint.update()
 
-                amount_tf.on_change = _refresh_conversion
+                attach_grouped_digits(
+                    amount_tf, lang, extra_on_change=_refresh_conversion
+                )
                 account_dd.on_select = _refresh_conversion
 
             async def _save() -> None:
@@ -447,12 +452,10 @@ class DebtsPage(ft.Column):
                 if has_interest:
                     assert principal_tf is not None and interest_tf is not None
                     try:
-                        principal = Decimal(
-                            str(principal_tf.value or "").replace(",", ".")
-                        )
+                        principal = parse_amount(principal_tf.value)
                         interest_raw = (interest_tf.value or "").strip()
                         interest_amount = (
-                            Decimal(interest_raw.replace(",", "."))
+                            parse_amount(interest_raw)
                             if interest_raw
                             else Decimal("0")
                         )
@@ -483,9 +486,7 @@ class DebtsPage(ft.Column):
                 else:
                     assert amount_tf is not None
                     try:
-                        pay_amount = Decimal(
-                            str(amount_tf.value or "").replace(",", ".")
-                        )
+                        pay_amount = parse_amount(amount_tf.value)
                         if pay_amount <= 0:
                             raise InvalidOperation
                     except (InvalidOperation, ValueError):
@@ -821,10 +822,10 @@ class DebtsPage(ft.Column):
                 label=tr("field.name", lang),
                 value=debt.counterparty if debt else "",
             )
-            amount_tf = ft.TextField(
+            amount_tf = make_amount_field(
+                lang,
                 label=tr("field.amount", lang),
-                value=str(debt.amount) if debt else "",
-                keyboard_type=ft.KeyboardType.NUMBER,
+                value=debt.amount if debt else "",
             )
             currency_picker = CurrencyTickerPicker(
                 self._page,
@@ -908,7 +909,7 @@ class DebtsPage(ft.Column):
 
             async def _save() -> None:
                 try:
-                    amount = Decimal(str(amount_tf.value or "").replace(",", "."))
+                    amount = parse_amount(amount_tf.value)
                     if amount <= 0:
                         raise InvalidOperation
                 except (InvalidOperation, ValueError):

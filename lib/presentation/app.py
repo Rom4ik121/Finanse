@@ -9,6 +9,7 @@ from typing import Any, Optional
 import flet as ft
 
 from lib.infrastructure.services.encryption_service import EncryptionService
+from lib.presentation.pages.account_detail import AccountDetailPage
 from lib.presentation.pages.accounts import AccountsPage
 from lib.presentation.pages.analytics import AnalyticsPage
 from lib.presentation.pages.budgets import BudgetsPage
@@ -234,6 +235,9 @@ class FinanseApp:
             return cached
         if route == "analytics":
             view: ft.Control = AnalyticsPage(self.page, self.state)
+        elif route.startswith("account:"):
+            account_id = route.split(":", 1)[1]
+            view = AccountDetailPage(self.page, self.state, account_id)
         elif route == "goals":
             view = GoalsPage(self.page, self.state)
         elif route == "debts":

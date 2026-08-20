@@ -1,5 +1,6 @@
 """Application pages."""
 
+from lib.presentation.pages.account_detail import AccountDetailPage
 from lib.presentation.pages.accounts import AccountsPage
 from lib.presentation.pages.analytics import AnalyticsPage
 from lib.presentation.pages.budgets import BudgetsPage
@@ -12,6 +13,7 @@ from lib.presentation.pages.subscriptions import SubscriptionsPage
 from lib.presentation.pages.transactions import TransactionsPage
 
 __all__ = [
+    "AccountDetailPage",
     "AccountsPage",
     "AnalyticsPage",
     "BudgetsPage",

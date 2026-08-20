@@ -47,6 +47,9 @@ class Transaction(BaseModel):
     goal_credit_amount: Optional[Decimal] = None
     # Amount applied to the linked debt remaining in the debt's currency (FX-aware).
     debt_credit_amount: Optional[Decimal] = None
+    # Shared id for a pair of transfer legs (outgoing expense + incoming income).
+    transfer_id: Optional[str] = None
+    transfer_peer_account_id: Optional[str] = None
 
     @field_validator("amount", "goal_credit_amount", "debt_credit_amount", mode="before")
     @classmethod
@@ -70,3 +73,8 @@ class Transaction(BaseModel):
         if value <= 0:
             raise ValueError("Transaction amount must be positive")
         return value
+
+    @property
+    def is_transfer(self) -> bool:
+        """True when this row is one leg of an account-to-account transfer."""
+        return bool(self.transfer_id)

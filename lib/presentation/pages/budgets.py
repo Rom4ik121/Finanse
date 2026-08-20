@@ -17,6 +17,7 @@ from lib.presentation.notification_badges import (
     pending_related_ids,
 )
 from lib.presentation.styles import card_surface, muted_text, page_header, summary_strip
+from lib.presentation.money_input import make_amount_field, parse_amount
 from lib.presentation.utils import category_icon, format_money, run_async, snack, tr
 from lib.presentation.widgets.category_picker import CategoryPicker
 from lib.presentation.widgets.confirm_dialog import confirm_dialog
@@ -304,10 +305,10 @@ class BudgetsPage(ft.Column):
             initial_name=budget.category_id if budget else None,
         )
         run_async(self._page, picker.reload)
-        limit_tf = ft.TextField(
+        limit_tf = make_amount_field(
+            lang,
             label=tr("budgets.limit", lang),
-            value=str(budget.amount_limit) if budget else "",
-            keyboard_type=ft.KeyboardType.NUMBER,
+            value=budget.amount_limit if budget else "",
             dense=True,
             border_radius=12,
             filled=True,
@@ -319,9 +320,8 @@ class BudgetsPage(ft.Column):
             if not name:
                 snack(self._page, tr("budgets.category_required", lang), error=True)
                 return
-            raw = (limit_tf.value or "").strip().replace(",", ".")
             try:
-                limit = Decimal(raw)
+                limit = parse_amount(limit_tf.value)
             except (InvalidOperation, ValueError):
                 snack(self._page, tr("budgets.limit_required", lang), error=True)
                 return

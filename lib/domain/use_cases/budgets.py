@@ -346,5 +346,5 @@ async def _sum_expenses(
         date_from=start,
         date_to=end,
     )
-    total = sum((tx.amount for tx in rows), Decimal("0"))
+    total = sum((tx.amount for tx in rows if not tx.transfer_id), Decimal("0"))
     return quantize_money(total)

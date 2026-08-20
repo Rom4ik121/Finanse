@@ -98,6 +98,8 @@ class TransactionModel(Base):
         nullable=True,
         index=True,
     )
+    transfer_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+    transfer_peer_account_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utc_now
     )

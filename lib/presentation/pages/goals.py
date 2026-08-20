@@ -22,6 +22,7 @@ from lib.presentation.styles import (
     section_title,
     summary_strip,
 )
+from lib.presentation.money_input import attach_grouped_digits, make_amount_field, parse_amount
 from lib.presentation.utils import (
     format_date,
     format_money,
@@ -258,9 +259,9 @@ class GoalsPage(ft.Column):
                 snack(self._page, tr("error.no_accounts", lang), error=True)
                 return
 
-            amount_tf = ft.TextField(
+            amount_tf = make_amount_field(
+                lang,
                 label=tr("field.amount", lang),
-                keyboard_type=ft.KeyboardType.NUMBER,
                 autofocus=True,
             )
             convert_hint = ft.Text("", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
@@ -281,7 +282,7 @@ class GoalsPage(ft.Column):
                     (a for a in accounts if a.id == account_dd.value), accounts[0]
                 )
                 try:
-                    amount = Decimal(str(amount_tf.value or "").replace(",", "."))
+                    amount = parse_amount(amount_tf.value)
                 except (InvalidOperation, ValueError):
                     convert_hint.value = ""
                     convert_hint.update()
@@ -307,12 +308,14 @@ class GoalsPage(ft.Column):
                     convert_hint.color = ft.Colors.ON_SURFACE_VARIANT
                 convert_hint.update()
 
-            amount_tf.on_change = _refresh_conversion
+            attach_grouped_digits(
+                amount_tf, lang, extra_on_change=_refresh_conversion
+            )
             account_dd.on_select = _refresh_conversion
 
             async def _save() -> None:
                 try:
-                    amount = Decimal(str(amount_tf.value or "").replace(",", "."))
+                    amount = parse_amount(amount_tf.value)
                     if amount <= 0:
                         raise InvalidOperation
                 except (InvalidOperation, ValueError):
@@ -669,10 +672,10 @@ class GoalsPage(ft.Column):
         name_tf = ft.TextField(
             label=tr("field.name", lang), value=goal.name if goal else ""
         )
-        target_tf = ft.TextField(
+        target_tf = make_amount_field(
+            lang,
             label=tr("goal.target", lang),
-            value=str(goal.target_amount) if goal else "",
-            keyboard_type=ft.KeyboardType.NUMBER,
+            value=goal.target_amount if goal else "",
         )
         priority_dd = ft.Dropdown(
             label=tr("field.priority", lang),
@@ -718,7 +721,7 @@ class GoalsPage(ft.Column):
 
         async def _save() -> None:
             try:
-                target = Decimal(str(target_tf.value or "").replace(",", "."))
+                target = parse_amount(target_tf.value)
                 if target <= 0:
                     raise InvalidOperation
             except (InvalidOperation, ValueError):

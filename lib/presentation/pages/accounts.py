@@ -15,6 +15,7 @@ from lib.presentation.account_icons import (
     account_icon_groups,
     is_valid_account_icon,
 )
+from lib.presentation.money_input import make_amount_field, parse_amount
 from lib.presentation.styles import ICON_CATALOG_GLYPH, page_header
 from lib.presentation.utils import (
     load_rate_book,
@@ -30,6 +31,7 @@ from lib.presentation.widgets.currency_ticker_picker import CurrencyTickerPicker
 from lib.presentation.widgets.empty_state import EmptyState
 from lib.presentation.widgets.fullscreen_form import dismiss_fullscreen
 from lib.presentation.widgets.loading import loading_indicator
+from lib.presentation.widgets.transfer_sheet import open_transfer
 if TYPE_CHECKING:
     from lib.presentation.state.app_state import AppState
 
@@ -55,8 +57,15 @@ class AccountsPage(ft.Column):
                             on_click=lambda _e: run_async(page, self.reload),
                         ),
                         ft.IconButton(
+                            icon=ft.Icons.SWAP_HORIZ_ROUNDED,
+                            icon_color=ft.Colors.PRIMARY,
+                            tooltip=tr("transaction.transfer", state.language),
+                            on_click=lambda _e: open_transfer(page, state),
+                        ),
+                        ft.IconButton(
                             icon=ft.Icons.ADD,
                             icon_color=ft.Colors.PRIMARY,
+                            tooltip=tr("action.add", state.language),
                             on_click=lambda _e: self._open_editor(),
                         ),
                     ],
@@ -116,12 +125,16 @@ class AccountsPage(ft.Column):
                     base_currency=base,
                     base_balance=converted,
                     language=self._state.language,
+                    on_click=self._open_stats,
                     on_edit=self._open_editor,
                     on_delete=self._confirm_delete,
                 )
             )
         self._list.controls = cards
         safe_update(self._list)
+
+    def _open_stats(self, account: Account) -> None:
+        self._state.open_secondary(f"account:{account.id}")
 
     def _confirm_delete(self, account: Account) -> None:
         lang = self._state.language
@@ -162,10 +175,10 @@ class AccountsPage(ft.Column):
             include_crypto=True,
             expand=True,
         )
-        balance_tf = ft.TextField(
+        balance_tf = make_amount_field(
+            lang,
             label=tr("account.balance", lang),
-            value=str(account.initial_balance if account else "0"),
-            keyboard_type=ft.KeyboardType.NUMBER,
+            value=account.initial_balance if account else "0",
             disabled=account is not None,
         )
 
@@ -311,7 +324,7 @@ class AccountsPage(ft.Column):
 
         async def _save(_e: ft.ControlEvent | None = None) -> None:
             try:
-                initial = Decimal(str(balance_tf.value or "0").replace(",", "."))
+                initial = parse_amount(balance_tf.value or "0")
             except (InvalidOperation, ValueError):
                 snack(self._page, tr("invalid_amount", lang), error=True)
                 return

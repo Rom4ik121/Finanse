@@ -19,6 +19,7 @@ from lib.presentation.notification_badges import (
     mark_related_read,
     pending_related_ids,
 )
+from lib.presentation.money_input import make_amount_field, parse_amount
 from lib.presentation.styles import card_surface, muted_text, page_header, summary_strip
 from lib.presentation.utils import (
     format_date,
@@ -559,10 +560,10 @@ class SubscriptionsPage(ft.Column):
         name_tf = ft.TextField(
             label=tr("field.name", lang), value=sub.name if sub else ""
         )
-        amount_tf = ft.TextField(
+        amount_tf = make_amount_field(
+            lang,
             label=tr("field.amount", lang),
-            value=str(sub.amount) if sub else "",
-            keyboard_type=ft.KeyboardType.NUMBER,
+            value=sub.amount if sub else "",
         )
         account_dd = ft.Dropdown(
             label=tr("field.account", lang),
@@ -667,7 +668,7 @@ class SubscriptionsPage(ft.Column):
 
         async def _save(_e: ft.ControlEvent | None = None) -> None:
             try:
-                amount = Decimal(str(amount_tf.value or "").replace(",", "."))
+                amount = parse_amount(amount_tf.value)
                 if amount <= 0:
                     raise InvalidOperation
             except (InvalidOperation, ValueError):

@@ -29,8 +29,13 @@ class TransactionTile(ft.Container):
         from lib.presentation.utils import tr
 
         _ = dark
+        is_transfer = transaction.is_transfer
         is_income = transaction.type == TransactionType.INCOME
-        amount_color = ft.Colors.SECONDARY if is_income else ft.Colors.ERROR
+        amount_color = (
+            ft.Colors.PRIMARY
+            if is_transfer
+            else (ft.Colors.SECONDARY if is_income else ft.Colors.ERROR)
+        )
         signed = format_money(
             transaction.amount,
             transaction.currency,
@@ -64,23 +69,39 @@ class TransactionTile(ft.Container):
         )
 
         icon_bg = (
-            category.color
-            if category is not None
+            ft.Colors.SECONDARY_CONTAINER
+            if is_transfer
             else (
-                ft.Colors.PRIMARY_CONTAINER
-                if is_income
-                else ft.Colors.ERROR_CONTAINER
+                category.color
+                if category is not None
+                else (
+                    ft.Colors.PRIMARY_CONTAINER
+                    if is_income
+                    else ft.Colors.ERROR_CONTAINER
+                )
             )
         )
         icon_data = (
-            category_icon(category.icon)
-            if category is not None
-            else (ft.Icons.SOUTH_WEST if is_income else ft.Icons.NORTH_EAST)
+            ft.Icons.SWAP_HORIZ_ROUNDED
+            if is_transfer
+            else (
+                category_icon(category.icon)
+                if category is not None
+                else (ft.Icons.SOUTH_WEST if is_income else ft.Icons.NORTH_EAST)
+            )
         )
-        icon_fg = "#FFFFFF" if category is not None else (
-            ft.Colors.ON_PRIMARY_CONTAINER
-            if is_income
-            else ft.Colors.ON_ERROR_CONTAINER
+        icon_fg = (
+            ft.Colors.ON_SECONDARY_CONTAINER
+            if is_transfer
+            else (
+                "#FFFFFF"
+                if category is not None
+                else (
+                    ft.Colors.ON_PRIMARY_CONTAINER
+                    if is_income
+                    else ft.Colors.ON_ERROR_CONTAINER
+                )
+            )
         )
 
         body = ft.Row(

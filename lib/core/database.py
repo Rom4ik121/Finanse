@@ -149,6 +149,8 @@ def _apply_sqlite_column_patches(engine: Engine) -> None:
             ("goal_credit_amount", "NUMERIC(18, 2)"),
             ("debt_credit_amount", "NUMERIC(18, 2)"),
             ("subscription_id", "VARCHAR(36)"),
+            ("transfer_id", "VARCHAR(36)"),
+            ("transfer_peer_account_id", "VARCHAR(36)"),
         ],
         "goals": [
             ("currency", "VARCHAR(16) NOT NULL DEFAULT 'RUB'"),
@@ -228,6 +230,8 @@ def _ensure_sqlite_indexes(engine: Engine) -> None:
         "ON subscriptions (status, next_billing_date)",
         "CREATE INDEX IF NOT EXISTS ix_transactions_subscription_id "
         "ON transactions (subscription_id)",
+        "CREATE INDEX IF NOT EXISTS ix_transactions_transfer_id "
+        "ON transactions (transfer_id)",
     )
     with engine.begin() as conn:
         tables = {

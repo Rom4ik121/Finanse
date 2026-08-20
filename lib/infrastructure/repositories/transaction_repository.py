@@ -43,6 +43,8 @@ def _to_entity(model: TransactionModel) -> Transaction:
             if getattr(model, "debt_credit_amount", None) is not None
             else None
         ),
+        transfer_id=getattr(model, "transfer_id", None),
+        transfer_peer_account_id=getattr(model, "transfer_peer_account_id", None),
         created_at=ensure_utc(model.created_at) or datetime.now(timezone.utc),
         updated_at=ensure_utc(model.updated_at) or datetime.now(timezone.utc),
     )
@@ -63,6 +65,8 @@ def _apply_entity(model: TransactionModel, entity: Transaction) -> None:
     model.subscription_id = entity.subscription_id
     model.goal_credit_amount = entity.goal_credit_amount
     model.debt_credit_amount = entity.debt_credit_amount
+    model.transfer_id = entity.transfer_id
+    model.transfer_peer_account_id = entity.transfer_peer_account_id
     model.created_at = ensure_utc(entity.created_at) or datetime.now(timezone.utc)
     model.updated_at = ensure_utc(entity.updated_at) or datetime.now(timezone.utc)
 
@@ -98,6 +102,8 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
         debt_id: Optional[str] = None,
         subscription_id: Optional[str] = None,
         has_subscription: Optional[bool] = None,
+        transfer_id: Optional[str] = None,
+        has_transfer: Optional[bool] = None,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> list[Transaction]:
@@ -113,6 +119,8 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
             debt_id,
             subscription_id,
             has_subscription,
+            transfer_id,
+            has_transfer,
             limit,
             offset,
         )
@@ -164,6 +172,8 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
         debt_id: Optional[str],
         subscription_id: Optional[str],
         has_subscription: Optional[bool],
+        transfer_id: Optional[str],
+        has_transfer: Optional[bool],
         limit: Optional[int],
         offset: int,
     ) -> list[Transaction]:
@@ -194,6 +204,12 @@ class SqlAlchemyTransactionRepository(TransactionRepository):
                 stmt = stmt.where(TransactionModel.subscription_id.is_not(None))
             elif has_subscription is False:
                 stmt = stmt.where(TransactionModel.subscription_id.is_(None))
+            if transfer_id is not None:
+                stmt = stmt.where(TransactionModel.transfer_id == transfer_id)
+            if has_transfer is True:
+                stmt = stmt.where(TransactionModel.transfer_id.is_not(None))
+            elif has_transfer is False:
+                stmt = stmt.where(TransactionModel.transfer_id.is_(None))
             stmt = stmt.order_by(TransactionModel.date.desc())
             if offset:
                 stmt = stmt.offset(offset)

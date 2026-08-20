@@ -92,6 +92,8 @@ async def _sync_budget_expense(
     """Apply or reverse an expense against the matching monthly budget."""
     if budgets is None or transaction.type != TransactionType.EXPENSE:
         return
+    if transaction.transfer_id:
+        return
     from lib.domain.use_cases.budgets import apply_expense_delta
 
     settings = None
@@ -219,6 +221,24 @@ class UpdateTransactionUseCase:
         existing = await self._transactions.get_by_id(transaction.id)
         if existing is None:
             raise ValueError(f"Transaction not found: {transaction.id}")
+        if existing.transfer_id:
+            if (
+                transaction.amount != existing.amount
+                or transaction.account_id != existing.account_id
+                or transaction.type != existing.type
+                or transaction.currency != existing.currency
+                or transaction.category != existing.category
+            ):
+                raise ValueError("Transfer legs cannot be edited independently")
+            transaction = transaction.model_copy(
+                update={
+                    "transfer_id": existing.transfer_id,
+                    "transfer_peer_account_id": existing.transfer_peer_account_id,
+                    "goal_id": None,
+                    "debt_id": None,
+                    "subscription_id": None,
+                }
+            )
 
         await self._apply_account_delta(
             existing.account_id,
@@ -335,7 +355,19 @@ class DeleteTransactionUseCase:
         existing = await self._transactions.get_by_id(transaction_id)
         if existing is None:
             return False
+        peer_ids: list[str] = []
+        if existing.transfer_id:
+            peers = await self._transactions.list(transfer_id=existing.transfer_id)
+            peer_ids = [p.id for p in peers if p.id != existing.id]
+        ok = await self._delete_one(existing)
+        for peer_id in peer_ids:
+            peer = await self._transactions.get_by_id(peer_id)
+            if peer is not None:
+                await self._delete_one(peer)
+        return ok
 
+    async def _delete_one(self, existing: Transaction) -> bool:
+        """Reverse one row without looking up its transfer peer."""
         account = await self._accounts.get_by_id(existing.account_id)
         if account is not None:
             account.balance = quantize_money(
@@ -367,7 +399,7 @@ class DeleteTransactionUseCase:
             settings_repo=self._settings,
             notifications=self._notifications,
         )
-        return await self._transactions.delete(transaction_id)
+        return await self._transactions.delete(existing.id)
 
 
 class ListTransactionsUseCase:
@@ -389,6 +421,8 @@ class ListTransactionsUseCase:
         debt_id: Optional[str] = None,
         subscription_id: Optional[str] = None,
         has_subscription: Optional[bool] = None,
+        transfer_id: Optional[str] = None,
+        has_transfer: Optional[bool] = None,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> list[Transaction]:
@@ -404,6 +438,8 @@ class ListTransactionsUseCase:
             debt_id=debt_id,
             subscription_id=subscription_id,
             has_subscription=has_subscription,
+            transfer_id=transfer_id,
+            has_transfer=has_transfer,
             limit=limit,
             offset=offset,
         )
@@ -472,6 +508,8 @@ class GetTransactionStatsUseCase:
         category_totals: dict[str, Decimal] = defaultdict(lambda: Decimal("0.00"))
 
         for tx in items:
+            if tx.transfer_id:
+                continue
             key = self._period_key(tx.date, group_by)
             if tx.type == TransactionType.INCOME:
                 total_income += tx.amount
@@ -524,3 +562,110 @@ class GetTransactionStatsUseCase:
             iso = dt.isocalendar()
             return f"{iso.year}-W{iso.week:02d}"
         return dt.strftime("%Y-%m")
+
+
+TRANSFER_CATEGORY = "Перевод"
+
+
+class TransferAccountsUseCase:
+    """Move money between two accounts as a linked expense + income pair."""
+
+    def __init__(
+        self,
+        add_transaction: AddTransactionUseCase,
+        delete_transaction: DeleteTransactionUseCase,
+        accounts: AccountRepository,
+        currencies: object,
+        find_or_create_category: object = None,
+    ) -> None:
+        self._add = add_transaction
+        self._delete = delete_transaction
+        self._accounts = accounts
+        self._currencies = currencies
+        self._find_or_create_category = find_or_create_category
+
+    async def execute(
+        self,
+        *,
+        from_account_id: str,
+        to_account_id: str,
+        amount: Decimal,
+        comment: str = "",
+        date: Optional[datetime] = None,
+    ) -> tuple[Transaction, Transaction]:
+        """Create both transfer legs and return ``(outgoing, incoming)``."""
+        from uuid import uuid4
+
+        from lib.domain.entities.category import CategoryKind
+        from lib.domain.services.rate_book import RateBook
+
+        if from_account_id == to_account_id:
+            raise ValueError("Cannot transfer to the same account")
+        amount = quantize_money(amount)
+        if amount <= 0:
+            raise ValueError("Transfer amount must be positive")
+
+        source = await self._accounts.get_by_id(from_account_id)
+        dest = await self._accounts.get_by_id(to_account_id)
+        if source is None:
+            raise ValueError(f"Account not found: {from_account_id}")
+        if dest is None:
+            raise ValueError(f"Account not found: {to_account_id}")
+        if source.balance < amount:
+            raise ValueError("Insufficient funds")
+
+        dest_amount = amount
+        if source.currency.upper() != dest.currency.upper():
+            rates = await self._currencies.list_rates()
+            converted = RateBook(rates).convert(amount, source.currency, dest.currency)
+            if converted is None:
+                raise ValueError("No exchange rate for this currency pair")
+            dest_amount = converted
+            if dest_amount <= 0:
+                raise ValueError("No exchange rate for this currency pair")
+
+        if self._find_or_create_category is not None:
+            await self._find_or_create_category.execute(
+                TRANSFER_CATEGORY,
+                kind=CategoryKind.BOTH,
+                icon="sync_alt",
+            )
+
+        when = date or _utc_now()
+        extra = (comment or "").strip()
+        out_comment = f"→ {dest.name}"
+        in_comment = f"← {source.name}"
+        if extra:
+            out_comment = f"{out_comment} · {extra}"
+            in_comment = f"{in_comment} · {extra}"
+
+        transfer_id = str(uuid4())
+        outgoing = Transaction(
+            account_id=source.id,
+            amount=amount,
+            category=TRANSFER_CATEGORY,
+            date=when,
+            comment=out_comment,
+            type=TransactionType.EXPENSE,
+            currency=source.currency,
+            transfer_id=transfer_id,
+            transfer_peer_account_id=dest.id,
+        )
+        incoming = Transaction(
+            account_id=dest.id,
+            amount=dest_amount,
+            category=TRANSFER_CATEGORY,
+            date=when,
+            comment=in_comment,
+            type=TransactionType.INCOME,
+            currency=dest.currency,
+            transfer_id=transfer_id,
+            transfer_peer_account_id=source.id,
+        )
+        created_out = await self._add.execute(outgoing)
+        try:
+            created_in = await self._add.execute(incoming)
+        except Exception:
+            await self._delete.execute(created_out.id)
+            raise
+        return created_out, created_in
