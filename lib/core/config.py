@@ -692,16 +692,20 @@ DEFAULT_CATEGORY_SEED: Final[tuple[tuple[str, str, str, str], ...]] = (
 
 def _is_ios() -> bool:
     """Detect iOS (incl. Flet iOS builds via Serious Python, Python 3.14)."""
+    # Serious Python on iOS may report sys.platform as "ios" or "darwin".
+    if sys.platform == "ios":
+        return True
     if sys.platform != "darwin":
         return False
-    # On iOS the app sandbox only permits access to its own container under
-    # ``/private/var/mobile/Containers``.  ``os.path.isdir`` on that parent
-    # path fails with ``PermissionError`` (silently returning ``False``)
-    # because the sandbox forbids ``stat`` outside the container.  Instead,
-    # check whether the user's home directory itself lives under that prefix.
+    # On iOS the home directory lives inside the app sandbox container.
+    # Path.home() may return a symlinked path (``/var/mobile/Containers/…``)
+    # or the resolved real path (``/private/var/mobile/Containers/…``).
+    # Check both forms to reliably detect iOS regardless of symlink resolution.
     home = str(Path.home())
-    if home.startswith("/private/var/mobile/Containers/"):
-        return True
+    resolved = str(Path.home().resolve())
+    for candidate in (home, resolved):
+        if "/var/mobile/Containers/" in candidate:
+            return True
     if os.environ.get("FTC_DEVICE") or os.environ.get("FLET_IOS"):
         return True
     return False
